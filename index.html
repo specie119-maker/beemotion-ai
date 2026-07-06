@@ -1644,10 +1644,6 @@
         }
 
         window.signInWithGoogle = function() {
-            if (!auth || firebaseConfig.apiKey === "YOUR_API_KEY") {
-                alert("Firebase Google Login is not fully configured yet.\n(Developer Note: Please add your actual firebaseConfig in index.html)");
-                return;
-            }
             
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
