@@ -834,10 +834,13 @@
         <button class="mobile-menu-btn">☰</button>
     </nav>
 
-    <!-- Hero Section -->
     <header id="hero">
-        <div class="hero-slider-bg">
-            <video id="homeHeroVideo" autoplay muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
+        <div class="hero-slider-bg" style="position: relative; background: url('홈화면/시니어4명서있는장면.png') center/cover no-repeat;">
+            <div id="homeHeroFallback" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); color: white; z-index: 1; font-size: 1.5rem; flex-direction: column;">
+                <span>영상을 불러오는 중 문제가 발생했습니다.</span>
+                <span style="font-size: 1rem; margin-top: 10px; color: #ccc;">대체 이미지를 표시합니다.</span>
+            </div>
+            <video id="homeHeroVideo" poster="홈화면/시니어4명서있는장면.png" autoplay muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2;"></video>
         </div>
         <div class="hero-overlay"></div>
         <div class="hero-content">
@@ -879,45 +882,45 @@
             <div class="program-card cat-upper">
                 <h3 data-i18n="prog_1_title">🧺 손으로 잡아넣기 운동<br>개인모드</h3>
                 <p data-i18n="prog_1_desc">손으로 공이나 물건을 잡아 바구니에 넣으며 잡기 능력과 협응력을 훈련합니다.</p>
-                <a href="손으로잡고넣기/grab.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
+                <a href="programs/grab.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
             </div>
             <div class="program-card cat-upper">
                 <h3 data-i18n="prog_2_title">🧺 손으로 잡아넣기 운동<br>단체모드</h3>
                 <p data-i18n="prog_2_desc">팀원과 함께 공을 옮겨보세요.<br>제한시간 동안 더 많이 성공한 팀이 승리합니다.</p>
-                <a href="손으로잡고넣기/grab.html?mode=group" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
+                <a href="programs/grab.html?mode=group" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
             </div>
             <div class="program-card cat-fruit">
                 <h3 data-i18n="prog_fruit_1_title">🍎 열매따기 운동<br>개인모드</h3>
                 <p data-i18n="prog_fruit_1_desc">손을 위로 올려 열매를 잡고 아래로 따며 어깨, 손가락, 악력을 함께 훈련합니다.</p>
-                <a href="열매따기/fruit.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
+                <a href="programs/fruit.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
             </div>
             <div class="program-card cat-fruit">
                 <h3 data-i18n="prog_fruit_2_title">🍎 열매따기 운동<br>단체모드</h3>
                 <p data-i18n="prog_fruit_2_desc">친구와 함께 열매 수확에 도전해보세요.<br>팀별 점수를 모아 즐겁게 경쟁합니다.</p>
-                <a href="열매따기/fruit.html?mode=group" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
+                <a href="programs/fruit.html?mode=group" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
             </div>
             <div class="program-card cat-walk">
                 <h3 data-i18n="prog_walk_1_title">🐶 산책하기<br>개인모드</h3>
                 <p data-i18n="prog_walk_1_desc">안전손잡이를 잡고 제자리 걷기를 하며 동물과 함께 즐겁게 산책합니다.</p>
-                <a href="walk/walk.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
+                <a href="programs/walk.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
             </div>
 
 
             <div class="program-card cat-bal">
                 <h3 data-i18n="prog_7_title">🚗 운전대 잡고 옮기기<br>개인모드</h3>
                 <p data-i18n="prog_7_desc">운전대를 양손으로 잡고 목표 방향으로 이동한 뒤 멈추며 전신 이동과 균형을 훈련합니다.</p>
-                <a href="운전대옮기기/steering-wheel.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
+                <a href="programs/steering-wheel.html?mode=individual" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
             </div>
             <div class="program-card cat-bal">
                 <h3 data-i18n="prog_8_title">🚗 운전대 잡고 옮기기<br>단체모드</h3>
                 <p data-i18n="prog_8_desc">순서대로 운전대를 조작해 목표에 도전하세요.<br>팀원이 함께 완주하는 협동 운동입니다.</p>
-                <a href="운전대옮기기/steering-wheel.html?mode=group" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
+                <a href="programs/steering-wheel.html?mode=group" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
             </div>
 
             <div class="program-card cat-market">
                 <h3 data-i18n="prog_3_title">🛒 재래시장 쇼핑하기</h3>
                 <p data-i18n="prog_3_desc">제자리 걷기를 통해 장바구니를 끌며 정겨운 전통시장 골목을 구경하는 재미있는 하지훈련 프로그램입니다.</p>
-                <a href="재래시장쇼핑하기/market.html" class="btn-primary" data-i18n="btn_individual">시작하기</a>
+                <a href="programs/market.html" class="btn-primary" data-i18n="btn_individual">시작하기</a>
             </div>
         </div>
         
@@ -1564,23 +1567,36 @@
 
             // Home Hero Video Slider
             const homeVideos = [
-                "asserts/홈화면/homefull.mp4",
-                "asserts/홈화면/leg_exercise.mp4",
-                "asserts/홈화면/handle_exercise.mp4",
-                "asserts/홈화면/mother_exercise.mp4"
+                "홈화면/homefull.mp4",
+                "홈화면/leg_exercise.mp4",
+                "홈화면/handle_exercise.mp4",
+                "홈화면/mother_exercise.mp4"
             ];
 
             let currentHomeVideo = 0;
             const homeHeroVideo = document.getElementById("homeHeroVideo");
+            const homeHeroFallback = document.getElementById("homeHeroFallback");
 
             function playHomeVideo() {
                 if(!homeHeroVideo) return;
+                
+                // Hide fallback initially
+                if (homeHeroFallback) homeHeroFallback.style.display = "none";
+                homeHeroVideo.style.display = "block";
+
                 homeHeroVideo.src = homeVideos[currentHomeVideo];
                 homeHeroVideo.load();
-                homeHeroVideo.play().catch(()=>{});
+                homeHeroVideo.play().catch(()=>{
+                    // Autoplay might be blocked or file missing
+                });
             }
 
             if(homeHeroVideo) {
+                homeHeroVideo.addEventListener("error", () => {
+                    homeHeroVideo.style.display = "none";
+                    if (homeHeroFallback) homeHeroFallback.style.display = "flex";
+                });
+                
                 homeHeroVideo.addEventListener("ended", () => {
                     currentHomeVideo = (currentHomeVideo + 1) % homeVideos.length;
                     playHomeVideo();

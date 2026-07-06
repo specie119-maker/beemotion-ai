@@ -1,0 +1,27 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "BeeMotion_final_backup/**",
+      "BeeMotion_final_backup_20260706/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "BeeMotion AI",
+        "supportEmail": "specie119@gmail.com"
+      }
+    }
+  }
+}

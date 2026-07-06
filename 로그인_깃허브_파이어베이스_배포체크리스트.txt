@@ -1,0 +1,172 @@
+로그인_깃허브_파이어베이스_배포체크리스트
+
+🔐 GitHub + Firebase 로그인 연동 최종 체크리스트
+1단계. GitHub 업로드 / Pages 배포 확인
+1) GitHub 저장소 구조
+❌ 잘못된 구조
+repository
+
+BeeMotion_final_backup/
+BeeMotion_final_backup_20260706/
+old_site/
+backup/
+
+index.html
+백업폴더까지 올리면 혼동 발생 가능
+⭕ 올바른 구조
+repository
+
+index.html
+
+프로그램.html
+
+assets/
+images/
+videos/
+
+CNAME
+
+README.md
+실제 실행할 index.html은 반드시 루트(root)에 위치
+2) Git Push 확인
+터미널:
+git status
+정상:
+On branch main
+
+Your branch is up to date with 'origin/main'
+
+nothing to commit, working tree clean
+이 메시지가 나오면 GitHub 업로드 완료
+3) GitHub Pages 확인
+GitHub:
+Repository
+↓
+Deployments
+확인:
+🟢 github-pages
+이면 정상
+또는
+Settings
+↓
+Pages
+확인:
+Source:
+Deploy from branch
+
+Branch:
+main
+
+Folder:
+/ root
+이어야 함
+2단계. Firebase Authentication 설정
+Firebase Console 접속
+Build
+ ↓
+Authentication
+ ↓
+Settings
+ ↓
+Authorized domains
+반드시 추가:
+localhost
+
+프로젝트명.firebaseapp.com
+
+프로젝트명.web.app
+
+내 도메인
+예)
+ai.beecarelab.kr
+
+GitHub 주소
+예)
+specie119-maker.github.io
+주의:
+❌ 입력 금지
+https://specie119-maker.github.io/beemotion-ai/
+⭕ 올바른 입력
+specie119-maker.github.io
+3단계. Firebase Config 코드 확인
+index.html 검색:
+firebaseConfig
+정상 예:
+const firebaseConfig = {
+
+apiKey: "실제키",
+
+authDomain: "프로젝트명.firebaseapp.com",
+
+projectId: "프로젝트명",
+
+storageBucket: "...",
+
+messagingSenderId: "...",
+
+appId: "..."
+
+};
+4단계. 개발용 테스트 코드 반드시 삭제
+❌ 삭제해야 하는 코드 예:
+if (
+firebaseConfig.apiKey === "YOUR_API_KEY"
+)
+{
+alert("Firebase 설정 필요")
+}
+또는
+Placeholder Firebase Config
+Replace with actual project config
+이런 문구가 있으면 삭제
+5단계. Google 로그인 표준 코드
+사용:
+initializeApp(firebaseConfig)
+
+getAuth(app)
+
+signInWithPopup(
+ auth,
+ new GoogleAuthProvider()
+)
+6단계. 오류별 원인
+오류:
+Firebase Error
+(auth/unauthorized-domain)
+원인:
+Firebase 승인 도메인 누락
+해결:
+Authentication → Authorized domains 추가
+오류:
+구글 버튼 클릭 안 됨
+원인:
+Firebase SDK 연결 오류
+임시 테스트 코드 남음
+함수 연결 안 됨
+확인:
+firebaseConfig
+GoogleAuthProvider
+signInWithPopup
+검색
+오류:
+GitHub는 수정했는데 예전 화면 나옴
+원인:
+Pages 배포 실패
+잘못된 index.html
+브라우저 캐시
+해결:
+강제 새로고침
+Mac:
+Command + Shift + R
+또는 주소:
+https://사이트주소/?v=날짜
+예:
+https://ai.beecarelab.kr/?v=20260706
+🚨 AI 개발자(안티) 작업 원칙
+새 사이트 제작 후 반드시 실행:
+Firebase 실제 config 삽입
+Placeholder 코드 제거
+Authorized domains 확인
+GitHub root index.html 확인
+Push 후 Deployments 초록 체크 확인
+실제 도메인에서 Google Login 테스트
