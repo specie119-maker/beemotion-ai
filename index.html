@@ -835,12 +835,12 @@
     </nav>
 
     <header id="hero">
-        <div class="hero-slider-bg" style="position: relative; background: url('홈화면/시니어4명서있는장면.png') center/cover no-repeat;">
+        <div class="hero-slider-bg" style="position: relative; background: url('./홈화면/시니어4명서있는장면.png') center/cover no-repeat;">
             <div id="homeHeroFallback" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); color: white; z-index: 1; font-size: 1.5rem; flex-direction: column;">
                 <span>영상을 불러오는 중 문제가 발생했습니다.</span>
                 <span style="font-size: 1rem; margin-top: 10px; color: #ccc;">대체 이미지를 표시합니다.</span>
             </div>
-            <video id="homeHeroVideo" poster="홈화면/시니어4명서있는장면.png" autoplay muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2;"></video>
+            <video id="homeHeroVideo" poster="./홈화면/시니어4명서있는장면.png" autoplay muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2;"></video>
         </div>
         <div class="hero-overlay"></div>
         <div class="hero-content">
@@ -1567,10 +1567,10 @@
 
             // Home Hero Video Slider
             const homeVideos = [
-                "홈화면/homefull.mp4",
-                "홈화면/leg_exercise.mp4",
-                "홈화면/handle_exercise.mp4",
-                "홈화면/mother_exercise.mp4"
+                "./홈화면/homefull.mp4",
+                "./홈화면/leg_exercise.mp4",
+                "./홈화면/handle_exercise.mp4",
+                "./홈화면/mother_exercise.mp4"
             ];
 
             let currentHomeVideo = 0;
