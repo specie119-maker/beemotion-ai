@@ -258,7 +258,7 @@
 
         .hero-title {
             font-weight: 900;
-            font-size: clamp(40px, 10vw, 120px);
+            font-size: clamp(60px, 15vw, 160px);
             letter-spacing: -2px;
             line-height: 1.1;
             margin-bottom: 20px;
@@ -851,7 +851,7 @@
             <div class="hero-desc" data-i18n="hero_desc">즐겁게 움직이고 건강하게 생활하세요</div>
             <div class="hero-buttons">
                 <a href="#programs" class="btn-primary" data-i18n="hero_btn_free">무료체험 시작</a>
-                <a href="#programs" class="btn-secondary" data-i18n="hero_btn_demo">데모 시청</a>
+                <a href="#programs" class="btn-secondary" id="demoBtn" data-i18n="hero_btn_demo">데모 시청</a>
             </div>
         </div>
     </header>
@@ -1586,9 +1586,13 @@
                 homeHeroVideo.style.display = "block";
 
                 if(homeVideos[currentHomeVideo].includes("mother_exercise")) {
-                    if(heroTextOverlay) heroTextOverlay.style.display = "none";
+                    if(heroTextOverlay) heroTextOverlay.style.display = "flex";
+                    const demoBtn = document.getElementById('demoBtn');
+                    if(demoBtn) demoBtn.style.display = 'none';
                 } else {
                     if(heroTextOverlay) heroTextOverlay.style.display = "flex";
+                    const demoBtn = document.getElementById('demoBtn');
+                    if(demoBtn) demoBtn.style.display = 'inline-flex';
                 }
 
                 homeHeroVideo.src = homeVideos[currentHomeVideo];
