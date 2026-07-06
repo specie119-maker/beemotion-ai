@@ -1,0 +1,67 @@
+스티치에게 보낼 Hero 영상 지시문
+Home Hero Section 수정
+
+첫 화면은 전체 배경 영상(full screen video hero)으로 구성한다.
+
+video:
+homefull.mp4
+
+설정:
+
+- width: 100vw
+- height: 100vh
+- object-fit: cover
+- autoplay
+- muted
+- loop
+
+영상 위 어두운 overlay 적용:
+
+background:
+rgba(0,0,0,0.35)
+
+고급 AI healthcare 느낌 유지
+BeeMotion 글씨 크기 (중요)
+지금 너무 작게 나온 이유는 보통 40~50px 정도 잡아서 그래요.
+PC 기준:
+BeeMotion Logo Text
+
+font-size: 120px;
+font-weight: 900;
+letter-spacing: -4px;
+태블릿:
+font-size: 80px;
+font-weight: 900;
+모바일:
+font-size: 52px;
+font-weight: 900;
+색상
+Bee:
+#FFC400
+또는 더 고급 골드:
+#FFD21F
+Motion:
+#FFFFFF
+추천:
+<span style="color:#FFC400">Bee</span>
+<span style="color:white">Motion</span>
+아래 문구
+Seniors AI Movement Program
+크기:
+font-size: 28px;
+font-weight: 600;
+letter-spacing: 2px;
+color:#FFFFFF;
+위치
+정중앙:
+.hero-title {
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+}
+최종 느낌:
+             BeeMotion
+      Seniors AI Movement Program
+이 글자가 화면의 25~30% 정도 차지해야 합니다.

@@ -1,0 +1,167 @@
+오류가 반복되서 단순화로 다시 작업
+
+[재래시장 쇼핑하기 안정화 방향]
+
+1차 버전:
+영상 1개만 사용
+카트 삭제
+코너 안내 삭제
+도착 문구 삭제
+자동 영상 전환 삭제
+
+남길 기능:
+- 재래시장 영상 배경
+- 카메라 켜기
+- AI 몸 인식
+- 걷기 감지
+- 걸음수 증가
+- 60초 / 90초 시간 종료
+
+동작:
+걷기 → 영상 재생 + 걸음수 증가
+멈춤 → 영상 정지 + 걸음수 정지
+
+먼저 이것만 안정화한다.
+
+2차 수정 >>>
+화면구성은 되었으니 몸인식이 안됨
+
+[재래시장 쇼핑하기 몸 인식 표시 복구]
+
+현재 상태:
+- 재래시장 영상은 정상 표시됨
+- AI 몸 인식창은 검정색으로 보임
+- “AI 몸 인식 완료” 문구는 뜸
+- 하지만 초록색 관절선이 표시되지 않음
+
+원인:
+카메라는 인식되고 있지만 pose_canvas에 스켈레톤이 그려지지 않는 상태로 보임.
+
+수정:
+
+1. pose_canvas 크기 강제 지정
+
+resizeCanvases() 안에 추가:
+
+poseCanvas.width = 240;
+poseCanvas.height = 180;
+
+또는 video_container 크기와 동일하게 맞춘다.
+
+2. pose_canvas CSS 확인
+
+#pose_canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 21;
+  background: #000;
+}
+
+3. drawConnectors 실행 확인
+
+pose.onResults 안에서 results.poseLandmarks가 있을 때 반드시 실행:
+
+poseCtx.clearRect(0, 0, poseCanvas.width, poseCanvas.height);
+poseCtx.fillStyle = "#000";
+poseCtx.fillRect(0, 0, poseCanvas.width, poseCanvas.height);
+
+drawConnectors(poseCtx, filteredLm, POSE_CONNECTIONS, {
+  color: "#00ff00",
+  lineWidth: 4
+});
+
+drawLandmarks(poseCtx, filteredLm, {
+  color: "#00ff00",
+  radius: 4
+});
+
+4. 얼굴 landmark만 숨기고 몸은 숨기지 말 것
+
+주의:
+index 0~10만 숨김.
+11번 어깨부터는 반드시 표시.
+
+5. 테스트 로그 추가
+
+pose.onResults 안에 추가:
+
+console.log("pose landmarks:", results.poseLandmarks?.length);
+
+만약 콘솔에 33이 나오면 인식은 되는 것.
+그런데 화면에 안 보이면 canvas 그리기 문제.
+
+완료 기준:
+AI 몸 인식창에 실제 영상은 보이지 않고,
+검정 배경 위에 초록색 관절선만 보여야 함.
+
+3차 수정 >>>
+영상 1 작동, 몸인식 성공 
+-> 영상 5개 연결 작동 시행해야 
+
+[재래시장 쇼핑하기 영상 순차 재생 기능 추가]
+
+현재 정상 작동:
+- MP4 영상 1개 재생 성공
+- MediaPipe 몸 인식 성공
+- 걷기 카운팅 정상
+
+이 기능 유지하면서 영상만 확장.
+
+목표:
+60초 걷기 동안 재래시장 영상 여러 개를 순서대로 보여준다.
+
+1차 테스트:
+영상 2개만 연결
+
+파일:
+assets/videos/market1.mp4
+assets/videos/market2.mp4
+
+구현:
+
+videoList 배열 생성
+
+const marketVideos = [
+ "assets/videos/market1.mp4",
+ "assets/videos/market2.mp4"
+];
+
+currentVideoIndex = 0;
+
+영상 종료 이벤트 추가:
+
+marketVideo.addEventListener("ended", () => {
+ currentVideoIndex++;
+
+ if(currentVideoIndex >= marketVideos.length){
+    currentVideoIndex = 0;
+ }
+
+ marketVideo.src = marketVideos[currentVideoIndex];
+ marketVideo.play();
+});
+
+
+중요:
+- 새로운 video 태그 만들지 말 것
+- 기존 marketVideo 하나만 사용
+- src만 교체할 것
+
+걷기 기능 연결:
+걷는 중 → 현재 영상 play
+멈춤 → 현재 영상 pause
+
+걸음수 카운팅 로직 수정 금지
+MediaPipe 코드 수정 금지
+
+성공 기준:
+30초/60초 운동 중
+첫번째 시장 영상 종료
+↓
+두번째 시장 영상 자동 재생
+
+화면 멈춤 없음
+몸인식 계속 유지
+

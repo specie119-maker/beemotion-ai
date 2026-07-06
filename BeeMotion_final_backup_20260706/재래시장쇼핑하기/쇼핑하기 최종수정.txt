@@ -1,0 +1,122 @@
+[재래시장 쇼핑하기 안내창 단순화]
+
+현재:
+“○○가게로 가볼까요?” 안내창 표시
+
+수정:
+코너 안내창 삭제.
+
+영상 자체가 시장 코너를 보여주므로
+화면 중앙 안내창은 사용하지 않는다.
+
+유지할 화면 요소:
+- 상단 왼쪽: 남은시간
+- 상단 중앙: 재래시장 쇼핑하기
+- 상단 오른쪽: 걸음수
+- 오른쪽 하단: AI 몸 인식 화면
+
+삭제:
+- 중앙 안내 카드
+- 코너 아이콘
+- “○○가게로 가볼까요?” 문구
+
+동작:
+걷기 감지 시 시장 영상 재생
+멈추면 영상 정지
+일정 걸음 후 다음 영상으로 자연스럽게 전환
+
+결과 화면:
+시장 구경 완료!
+총 걸음수
+운동시간
+방문한 코너 수
+
+
+[재래시장 쇼핑하기 MP4 영상 배경 적용 오류 수정]
+
+현재 문제:
+shopping1~5 영상을 사용하라고 했지만 화면에 영상이 나오지 않음.
+배경이 하늘색으로만 표시됨.
+즉, video element가 없거나 src 연결이 안 되었거나 z-index 뒤에 숨어 있음.
+
+수정 목표:
+정지 이미지 배경 삭제.
+5개 MP4 영상을 코너별 배경으로 사용한다.
+
+필수 파일:
+assets/market/shopping1.mp4
+assets/market/shopping2.mp4
+assets/market/shopping3.mp4
+assets/market/shopping4.mp4
+assets/market/shopping5.mp4
+
+HTML에 반드시 추가:
+<video id="market-video" muted playsinline preload="auto"></video>
+
+CSS:
+#market-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  background: #000;
+}
+
+기존 하늘색 배경보다 앞에 보여야 함.
+안내문구, 걸음수, 카메라창은 video보다 위에 있어야 함.
+
+z-index 기준:
+market-video: 1
+top-bar: 50
+guide-card: 60
+camera-box: 70
+
+
+코너 데이터:
+const marketVideos = [
+  { name: "생선가게", message: "생선가게로 가볼까요?", icon: "🐟", src: "assets/market/shopping1.mp4" },
+  { name: "떡집", message: "떡집으로 가볼까요?", icon: "🍡", src: "assets/market/shopping2.mp4" },
+  { name: "반찬가게", message: "반찬가게로 가볼까요?", icon: "🥘", src: "assets/market/shopping3.mp4" },
+  { name: "과일·채소가게", message: "과일·채소가게로 가볼까요?", icon: "🥬", src: "assets/market/shopping4.mp4" },
+  { name: "잡화가게", message: "잡화가게로 가볼까요?", icon: "🧺", src: "assets/market/shopping5.mp4" }
+];
+
+게임 시작 시:
+1. 랜덤 코너 선택
+2. marketVideo.src = 선택된 src
+3. marketVideo.load()
+4. 안내문구 표시
+
+걷기 감지 시:
+if (walkingState) {
+  marketVideo.play();
+}
+
+멈춤:
+if (!walkingState) {
+  marketVideo.pause();
+}
+
+중요:
+영상은 자동으로 계속 재생하지 않는다.
+어르신이 걸을 때만 재생한다.
+
+코너 성공:
+한 코너에서 10~15보 걷기 완료 시
+- “○○ 도착!” 표시
+- 방문 코너 수 +1
+- 다음 랜덤 코너 선택
+- video src 교체
+- 새 영상은 처음부터 시작
+
+새 코너 시작 시:
+marketVideo.currentTime = 0;
+
+완료 기준:
+- 화면 전체에 재래시장 영상이 보여야 함
+- 하늘색 배경이 보이면 실패
+- 걷기 시작하면 영상 재생
+- 멈추면 영상 정지
+- 다음 코너로 넘어가면 다른 영상으로 바뀜

@@ -1,0 +1,221 @@
+[배포 연결 문제 수정]
+
+현재 문제:
+로컬 html 파일로 열면 새 BeeMotion 화면이 보임.
+하지만 https://ai.beecarelab.kr/ 로 접속하면 예전에 만든 사이트가 나옴.
+
+원인:
+새로 만든 BeeMotion 파일들이 실제 배포 경로에 적용되지 않았거나,
+Firebase/GitHub 배포 대상 폴더가 예전 파일을 보고 있음.
+
+수정 목표:
+https://ai.beecarelab.kr/ 접속 시
+현재 로컬에서 작업한 BeeMotion 최종 홈화면이 나오게 한다.
+
+확인할 것:
+1. index.html이 최신 BeeMotion 홈화면인지 확인
+2. walk.html, grab.html, fruit.html, steering_feel.html, market.html 포함 확인
+3. assets 폴더 전체 포함 확인
+4. GitHub 저장소에 최신 파일 업로드 확인
+5. Firebase Hosting 또는 배포 설정이 올바른 폴더를 보고 있는지 확인
+6. 예전 사이트 파일이 public/dist/build 폴더에 남아 있으면 삭제 또는 교체
+
+중요:
+로컬 파일이 아니라
+배포된 사이트에서 최신 BeeMotion이 보여야 한다.
+
+완료 기준:
+https://ai.beecarelab.kr/ 접속 시
+새 BeeMotion 홈화면 표시
+홈화면 영상 슬라이드 표시
+프로그램 버튼 연결 정상
+로그인/결제 페이지 연결 정상
+
+
+[최종 백업 후 도메인 배포 교체]
+
+1. 현재 완성된 BeeMotion 파일 전체를 백업한다.
+
+백업 폴더명:
+BeeMotion_final_backup
+
+포함:
+- index.html
+- walk.html
+- grab.html
+- fruit.html
+- steering_feel.html
+- market.html
+- terms.html
+- privacy.html
+- assets 폴더 전체
+
+2. 백업 완료 후
+https://ai.beecarelab.kr/ 에 연결된 기존 배포 파일을 새 BeeMotion 파일로 교체한다.
+
+3. 확인할 것:
+- Firebase Hosting 또는 GitHub Pages가 어느 폴더를 배포하는지 확인
+- 예전 사이트 index.html 삭제 또는 교체
+- 새 index.html이 루트에 있어야 함
+
+4. 완료 기준:
+https://ai.beecarelab.kr/ 접속 시
+새 BeeMotion 홈화면이 나와야 함.
+
+
+[Firebase 로그인 / GitHub / 도메인 배포 전체 점검]
+
+현재 문제:
+1. 로컬 html에서는 BeeMotion 최신 화면 확인됨
+2. https://ai.beecarelab.kr 접속 시 예전 사이트가 표시됨
+3. Google 로그인 버튼 작동 안 함
+4. 회원가입 기능 연결 문제 발생
+
+원인 가능성:
+Firebase Auth 문제가 아니라
+현재 배포된 파일과 개발 파일이 다를 가능성이 높음.
+
+================================================
+1단계: 현재 완성본 백업
+================================================
+
+먼저 현재 정상 작동하는 BeeMotion 파일 전체 백업
+
+폴더명:
+BeeMotion_final_backup_20260706
+
+포함:
+- index.html
+- walk.html
+- grab.html
+- fruit.html
+- steering_feel.html
+- market.html
+- login 관련 파일
+- payment 관련 파일
+- assets 전체
+
+백업 완료 후 진행.
+
+
+================================================
+2단계: GitHub 업로드 파일 확인
+================================================
+
+GitHub 저장소 실제 파일 확인.
+
+반드시 최신 파일인지 비교:
+
+index.html
+walk.html
+grab.html
+fruit.html
+steering_feel.html
+market.html
+assets/
+
+예전 BeeMotion 파일이 남아 있으면 제거.
+
+중요:
+GitHub 루트 index.html이
+현재 최종 홈화면이어야 함.
+
+
+================================================
+3단계: Firebase Hosting 연결 확인
+================================================
+
+확인:
+
+firebase.json
+
+hosting public 경로 확인.
+
+예:
+
+{
+ "hosting": {
+   "public": "dist"
+ }
+}
+
+이면 dist 안의 파일이 배포됨.
+
+public 경로와 실제 BeeMotion 파일 위치 일치시킬 것.
+
+
+================================================
+4단계: Firebase Authentication 확인
+================================================
+
+Firebase Console:
+
+Authentication
+→ Sign-in method
+
+확인:
+
+Email/Password : Enabled
+Google : Enabled
+
+
+승인된 도메인 확인:
+
+Authentication
+→ Settings
+→ Authorized domains
+
+반드시 추가:
+
+ai.beecarelab.kr
+
+기본:
+프로젝트명.firebaseapp.com
+프로젝트명.web.app
+
+
+================================================
+5단계: Google 로그인 코드 확인
+================================================
+
+firebaseConfig 확인.
+
+현재 Firebase 프로젝트 값과 일치해야 함.
+
+Google 로그인:
+
+signInWithPopup(provider)
+
+또는
+
+signInWithRedirect(provider)
+
+연결 확인.
+
+
+================================================
+6단계: 배포
+================================================
+
+최신 BeeMotion 파일로 다시 배포.
+
+배포 후 확인:
+
+https://ai.beecarelab.kr
+
+테스트:
+- 새 홈화면 표시
+- 회원가입 가능
+- Google 로그인 창 표시
+- 결제 페이지 정상
+- 운동 프로그램 실행 정상
+
+
+주의:
+운동 프로그램 코드 수정 금지.
+
+이번 작업은:
+Firebase 연결
+GitHub 배포
+로그인 인증
+만 수정한다.

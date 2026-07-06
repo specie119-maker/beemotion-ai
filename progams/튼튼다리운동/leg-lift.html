@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeMotion - 튼튼다리 운동</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { height: 100vh; display: flex; overflow: hidden; background: #f8fafc; color: #1f2937; }
+        #settings-panel { width: 450px; background: #fff; padding: 40px; box-shadow: 2px 0 20px rgba(0,0,0,.06); z-index: 100; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; }
+        #settings-panel.hidden { display: none; }
+        .settings-title { font-size: 30px; font-weight: 900; color: #1f3a22; }
+        .program-desc { font-size: 17px; line-height: 1.65; font-weight: 700; color: #536047; }
+        .settings-group { display: flex; flex-direction: column; gap: 10px; }
+        .settings-group label { font-size: 18px; font-weight: 900; color: #1f3a22; }
+        .radio-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        .radio-btn { flex: 1; padding: 13px 10px; border: 2px solid #e2e8f0; border-radius: 12px; text-align: center; cursor: pointer; font-weight: 800; background: #fff; user-select: none; }
+        .radio-btn.active { border-color: #3fa66b; background: #effaf3; color: #1f7a45; }
+        .btn-team.active[data-val="red"] { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+        .btn-team.active[data-val="blue"] { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+        .btn-team.active[data-val="yellow"] { border-color: #eab308; background: #fefce8; color: #a16207; }
+        .btn-action { background: #3fa66b; color: #fff; border: 0; padding: 18px; border-radius: 16px; font-size: 20px; font-weight: 900; cursor: pointer; }
+        .btn-camera { background: #1f3a22; }
+        .btn-scoreboard { background: #f1f5f9; color: #475569; }
+        #exercise-area { flex: 1; position: relative; background: linear-gradient(180deg, #bfe8ff 0%, #f7efd8 48%, #d7b484 100%); }
+        #top-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px 40px; z-index: 70; display: none; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,.62), rgba(0,0,0,0)); }
+        #top-bar.active { display: flex; }
+        .top-stat { min-width: 190px; padding: 10px 24px; border-radius: 18px; background: rgba(255,255,255,.94); color: #1f3a22; font-size: 28px; font-weight: 900; text-align: center; }
+        .top-title { color: #fff; font-size: 34px; font-weight: 900; text-align: center; text-shadow: 0 3px 12px rgba(0,0,0,.45); }
+        #video_input { display: none; }
+        #scene_canvas, #pose_canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        #scene_canvas { z-index: 10; }
+        #pose_canvas { z-index: 9999; transform: scaleX(-1); }
+        #guide-overlay { position: absolute; right: 30px; bottom: 28px; z-index: 60; max-width: 540px; padding: 22px 26px; border-radius: 18px; background: rgba(255,255,255,.95); color: #1f3a22; border: 3px solid #3fa66b; box-shadow: 0 10px 30px rgba(0,0,0,.16); display: none; }
+        #guide-overlay .main-guide { font-size: 28px; font-weight: 900; color: #1f7a45; margin-bottom: 10px; }
+        #guide-overlay .sub-guide { font-size: 18px; font-weight: 800; line-height: 1.55; }
+        .overlay-screen { position: absolute; inset: 0; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: rgba(248,250,252,.96); }
+        .overlay-screen.active { display: flex; }
+        .result-title { font-size: 68px; font-weight: 900; color: #1f3a22; margin-bottom: 20px; }
+        .result-score { font-size: 58px; font-weight: 900; color: #22c55e; margin-bottom: 28px; }
+        .team-score-list { font-size: 40px; font-weight: 800; text-align: left; margin-bottom: 45px; }
+        #countdown-screen { background: rgba(0,0,0,.85); }
+        #countdown-text { font-size: 240px; font-weight: 900; color: #8ee3a3; }
+        @media (max-width: 900px) {
+            body { display: block; }
+            #settings-panel { width: 100%; height: 100vh; }
+            #top-bar { padding: 14px; }
+            .top-stat { min-width: 120px; font-size: 18px; padding: 8px 12px; }
+            .top-title { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="settings-panel">
+        <div class="settings-title">🦵 튼튼다리 운동</div>
+        <div class="program-desc">
+            의자에 앉아 발을 바닥에서 조금만 들어보세요.<br>
+            무리 없이 안전하게 하지근력을 연습합니다.
+        </div>
+
+        <div id="group-settings" style="display: none; flex-direction: column; gap: 25px;">
+            <div class="settings-group">
+                <label>팀 선택</label>
+                <div class="radio-options" id="opt-team">
+                    <div class="radio-btn btn-team active" data-val="red">🔴 빨강팀</div>
+                    <div class="radio-btn btn-team" data-val="blue">🔵 파랑팀</div>
+                    <div class="radio-btn btn-team" data-val="yellow">🟡 노랑팀</div>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label>참가 인원</label>
+                <div class="radio-options" id="opt-players">
+                    <div class="radio-btn" data-val="2">2명</div>
+                    <div class="radio-btn active" data-val="3">3명</div>
+                    <div class="radio-btn" data-val="4">4명</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <label>운동 시간</label>
+            <div class="radio-options" id="opt-time">
+                <div class="radio-btn" data-val="20">20초</div>
+                <div class="radio-btn active" data-val="30">30초</div>
+                <div class="radio-btn" data-val="40">40초</div>
+            </div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <div id="pose-status" style="text-align:center; font-weight:900; color:#ef4444; font-size:18px;">카메라를 켜주세요</div>
+            <button class="btn-action btn-camera" id="btn-camera" onclick="startCamera()">카메라 켜기</button>
+            <button class="btn-action" id="btn-start">시작하기</button>
+            <button class="btn-action btn-scoreboard" onclick="showScoreboard()" id="btn-scoreboard" style="display:none;">🏆 모든 팀 결과 보기</button>
+            <button class="btn-action" style="background:#ef4444; display:none;" onclick="resetTeamScores()" id="btn-reset">전체 점수 초기화</button>
+        </div>
+        <div style="text-align:center;">
+            <a href="index.html" style="color:#666; font-weight:700; text-decoration:none;">돌아가기</a>
+        </div>
+    </div>
+
+    <div id="exercise-area">
+        <div id="top-bar">
+            <div class="top-stat" id="ui-time">남은시간 30초</div>
+            <div class="top-title" id="ui-title">튼튼다리 운동</div>
+            <div class="top-stat" id="ui-score" style="color:#22c55e;">성공 0회</div>
+        </div>
+        <div id="guide-overlay">
+            <div class="main-guide">의자에 앉아 허리부터 무릎, 발까지 화면에 보이도록 카메라에서 조금 떨어져 주세요.</div>
+            <div class="sub-guide">높이 들지 않아도 됩니다. 발을 바닥에서 살짝만 들어 올려도 성공입니다.</div>
+        </div>
+
+        <video id="video_input" autoplay playsinline></video>
+        <canvas id="scene_canvas"></canvas>
+        <canvas id="pose_canvas"></canvas>
+
+        <div class="overlay-screen" id="countdown-screen">
+            <div id="countdown-text">3</div>
+        </div>
+
+        <div class="overlay-screen" id="result-screen">
+            <canvas id="confetti-single" style="position:absolute; width:100%; height:100%; pointer-events:none; z-index:-1;"></canvas>
+            <div style="font-size:40px; color:#666; font-weight:800; margin-bottom:10px;" id="res-subtitle"></div>
+            <div class="result-title" id="res-title">수고하셨습니다</div>
+            <div class="result-score" id="res-score">성공 0회</div>
+            <div class="result-score" id="res-time" style="font-size:36px; margin-bottom:50px; color:#1f3a22;">운동 시간: 0초</div>
+            <div id="res-next-notice" style="font-size:28px; margin-bottom:30px; color:#555; display:none;">다음 참가자 준비하세요.</div>
+            <button class="btn-action" style="padding:20px 60px; font-size:28px;" id="res-btn" onclick="nextAction()">다시 시작하기</button>
+        </div>
+
+        <div class="overlay-screen" id="scoreboard-screen">
+            <canvas id="confetti" style="position:absolute; width:100%; height:100%; pointer-events:none; z-index:-1;"></canvas>
+            <div class="result-title" style="font-size:86px; margin-bottom:10px;">🎉 결과 보기 🎉</div>
+            <div style="font-size:50px; font-weight:900; margin-bottom:40px; color:#1f7a45;" id="score-winner"></div>
+            <div class="team-score-list" id="score-list"></div>
+            <button class="btn-action" style="padding:20px 60px; font-size:28px;" onclick="closeScoreboard()">처음으로 돌아가기</button>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const initMode = urlParams.get('mode') || 'individual';
+        const config = { mode: initMode, team: 'red', players: 3, time: 30 };
+        const teamNames = { red: '🔴 빨강팀', blue: '🔵 파랑팀', yellow: '🟡 노랑팀' };
+        const plainNames = { red: '빨강팀', blue: '파랑팀', yellow: '노랑팀' };
+        const orderedTeams = ['red', 'blue', 'yellow'];
+        const scoreKey = 'beeMotionLegLiftTeamScores';
+        const completedKey = 'beeMotionLegLiftTeamCompleted';
+        let teamScores = { red: 0, blue: 0, yellow: 0 };
+        let teamCompleted = { red: false, blue: false, yellow: false };
+        try { teamScores = { ...teamScores, ...JSON.parse(sessionStorage.getItem(scoreKey) || '{}') }; } catch(e) {}
+        try { teamCompleted = { ...teamCompleted, ...JSON.parse(sessionStorage.getItem(completedKey) || '{}') }; } catch(e) {}
+
+        if (config.mode === 'group') {
+            document.getElementById('group-settings').style.display = 'flex';
+            document.getElementById('btn-scoreboard').style.display = 'block';
+            document.getElementById('btn-reset').style.display = 'block';
+        }
+
+        const videoElement = document.getElementById('video_input');
+        const sceneCanvas = document.getElementById('scene_canvas');
+        const sceneCtx = sceneCanvas.getContext('2d');
+        const poseCanvas = document.getElementById('pose_canvas');
+        const poseCtx = poseCanvas.getContext('2d');
+        let camera = null;
+        let isExercising = false;
+        let score = 0;
+        let timeLeft = 0;
+        let timerInterval = null;
+        let currentPlayer = 1;
+        let teamRunTotalScore = 0;
+        let isGameLoopRunning = false;
+        let poseRecognized = false;
+        let poseLostFrames = 0;
+        let stageIndex = 0;
+        let attemptStartedAt = 0;
+        let exerciseStartedAt = 0;
+        let feedback = { text: '', t: 0 };
+        let currentLandmarks = null;
+        let frameLogCounter = 0;
+        let counts = { right: 0, left: 0 };
+        let motion = {
+            right: { baseline: null, raised: false },
+            left: { baseline: null, raised: false }
+        };
+        let legs = {
+            right: { visible: false, kneeY: 0, ankleY: 0, footX: 0, footY: 0 },
+            left: { visible: false, kneeY: 0, ankleY: 0, footX: 0, footY: 0 }
+        };
+        let smoothedLM = {};
+        let activeEffects = [];
+        const stages = [
+            { key: 'right', label: '오른발', guide: '오른발을 바닥에서 조금만 들어주세요' },
+            { key: 'left', label: '왼발', guide: '왼발을 바닥에서 조금만 들어주세요' }
+        ];
+
+        function resizeCanvases() {
+            sceneCanvas.width = window.innerWidth;
+            sceneCanvas.height = window.innerHeight;
+            poseCanvas.width = window.innerWidth;
+            poseCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
+        function setupRadio(groupId, configKey) {
+            const container = document.getElementById(groupId);
+            if (!container) return;
+            container.querySelectorAll('.radio-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    config[configKey] = btn.getAttribute('data-val');
+                    if (configKey === 'team') {
+                        currentPlayer = 1;
+                        teamRunTotalScore = 0;
+                        prepareSelectedTeamStart();
+                    }
+                });
+            });
+        }
+        setupRadio('opt-team', 'team');
+        setupRadio('opt-players', 'players');
+        setupRadio('opt-time', 'time');
+
+        function saveTeamProgress() {
+            sessionStorage.setItem(scoreKey, JSON.stringify(teamScores));
+            sessionStorage.setItem(completedKey, JSON.stringify(teamCompleted));
+        }
+
+        function resetTeamScores() {
+            if (confirm('모든 팀의 튼튼다리 기록을 초기화할까요?')) {
+                teamScores = { red: 0, blue: 0, yellow: 0 };
+                teamCompleted = { red: false, blue: false, yellow: false };
+                saveTeamProgress();
+                alert('초기화되었습니다.');
+            }
+        }
+
+        function prepareSelectedTeamStart() {
+            const startBtn = document.getElementById('btn-start');
+            startBtn.disabled = false;
+            startBtn.style.opacity = '1';
+            startBtn.innerText = config.mode === 'group' ? `${teamNames[config.team]} 시작하기` : '시작하기';
+        }
+
+        function allTeamsCompleted() {
+            return orderedTeams.every(team => teamCompleted[team]);
+        }
+
+        function resetMotionState() {
+            const oldRightBase = motion.right ? motion.right.baseline : null;
+            const oldLeftBase = motion.left ? motion.left.baseline : null;
+            motion = {
+                right: { baseline: oldRightBase, raised: false, waitingDown: false },
+                left: { baseline: oldLeftBase, raised: false, waitingDown: false }
+            };
+            attemptStartedAt = performance.now();
+        }
+
+        function resetExerciseRoundState() {
+            isExercising = false;
+            score = 0;
+            timeLeft = parseInt(config.time);
+            stageIndex = 0;
+            counts = { right: 0, left: 0 };
+            feedback = { text: '', t: 0 };
+            resetMotionState();
+            if (timerInterval) clearInterval(timerInterval);
+            updateScoreText();
+            document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
+            setGuideMessage('발끝이 화면 아래로 잘리면 인식되지 않습니다.', '카메라에서 조금 뒤로 앉아주세요.');
+        }
+
+        function showSettingsForNextTeam() {
+            resetExerciseRoundState();
+            currentPlayer = 1;
+            teamRunTotalScore = 0;
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('top-bar').classList.remove('active');
+            document.getElementById('settings-panel').classList.remove('hidden');
+            prepareSelectedTeamStart();
+        }
+
+        function runCountdownThenStart() {
+            const countdownScreen = document.getElementById('countdown-screen');
+            const countdownText = document.getElementById('countdown-text');
+            countdownScreen.classList.add('active');
+            let count = 3;
+            countdownText.innerText = count;
+            const countInt = setInterval(() => {
+                count--;
+                if (count > 0) countdownText.innerText = count;
+                else {
+                    clearInterval(countInt);
+                    countdownScreen.classList.remove('active');
+                    startGame();
+                }
+            }, 1000);
+        }
+
+        function currentStage() {
+            return stages[Math.min(stageIndex, stages.length - 1)];
+        }
+
+        function updateScoreText() {
+            const stage = currentStage();
+            const count = counts[stage.key] || 0;
+            document.getElementById('ui-score').innerText = `${stage.label} ${count} / 5`;
+        }
+
+        function setGuideMessage(main, sub) {
+            const mainEl = document.querySelector('#guide-overlay .main-guide');
+            const subEl = document.querySelector('#guide-overlay .sub-guide');
+            if (mainEl) mainEl.innerText = main;
+            if (subEl) subEl.innerText = sub;
+        }
+
+        function drawScene(now) {
+            const w = sceneCanvas.width;
+            const h = sceneCanvas.height;
+            const g = sceneCtx.createLinearGradient(0, 0, 0, h);
+            g.addColorStop(0, '#bfe8ff');
+            g.addColorStop(0.52, '#fff7df');
+            g.addColorStop(1, '#d8b183');
+            sceneCtx.fillStyle = g;
+            sceneCtx.fillRect(0, 0, w, h);
+
+            // 단순 하체 안내 표시 (의자 이미지 대체)
+            sceneCtx.fillStyle = 'rgba(255,255,255,0.6)';
+            sceneCtx.beginPath();
+            sceneCtx.roundRect(w * 0.40, h * 0.66, w * 0.20, h * 0.10, 20);
+            sceneCtx.fill();
+            sceneCtx.fillStyle = '#1f7a45';
+            sceneCtx.font = `900 ${Math.max(18, w * 0.015)}px Inter`;
+            sceneCtx.textAlign = 'center';
+            sceneCtx.textBaseline = 'middle';
+            sceneCtx.fillText("⬆️ 발 살짝 들기", w * 0.50, h * 0.71);
+
+            const cards = [
+                ['오른발', counts.right, w * 0.38, '#3b82f6'],
+                ['왼발', counts.left, w * 0.62, '#22c55e']
+            ];
+            cards.forEach(([label, count, x, color]) => {
+                sceneCtx.fillStyle = 'rgba(255,255,255,.94)';
+                sceneCtx.strokeStyle = color;
+                sceneCtx.lineWidth = 4;
+                sceneCtx.beginPath();
+                sceneCtx.roundRect(x - w * 0.09, 104, w * 0.18, 92, 18);
+                sceneCtx.fill();
+                sceneCtx.stroke();
+                sceneCtx.fillStyle = '#1f2937';
+                sceneCtx.font = `900 ${Math.max(22, w * 0.020)}px Inter`;
+                sceneCtx.textAlign = 'center';
+                sceneCtx.fillText(label, x, 138);
+                sceneCtx.fillText(`${count} / 5`, x, 174);
+            });
+
+            const stage = currentStage();
+            sceneCtx.fillStyle = 'rgba(31,58,34,.88)';
+            sceneCtx.beginPath();
+            sceneCtx.roundRect(w * 0.30, h * 0.23, w * 0.40, 76, 20);
+            sceneCtx.fill();
+            sceneCtx.fillStyle = '#fff';
+            sceneCtx.font = `900 ${Math.max(28, w * 0.030)}px Inter`;
+            sceneCtx.textAlign = 'center';
+            sceneCtx.textBaseline = 'middle';
+            sceneCtx.fillText(stage.guide, w * 0.50, h * 0.23 + 38);
+
+            const remaining = Math.max(0, 3 - (now - attemptStartedAt) / 1000);
+            sceneCtx.fillStyle = remaining < 1 ? '#ef4444' : '#1f7a45';
+            sceneCtx.font = `900 ${Math.max(24, w * 0.024)}px Inter`;
+            sceneCtx.fillText(`이번 시도 ${remaining.toFixed(1)}초`, w * 0.50, h * 0.23 + 104);
+
+            if (feedback.text && now - feedback.t < 900) {
+                const age = now - feedback.t;
+                sceneCtx.globalAlpha = 1 - age / 900;
+                sceneCtx.font = `900 ${Math.max(44, w * 0.046)}px Inter`;
+                sceneCtx.fillStyle = '#fff';
+                sceneCtx.strokeStyle = '#14532d';
+                sceneCtx.lineWidth = 8;
+                sceneCtx.strokeText(feedback.text, w * 0.50 - 150, h * 0.42);
+                sceneCtx.fillText(feedback.text, w * 0.50 - 150, h * 0.42);
+                sceneCtx.globalAlpha = 1;
+                sceneCtx.fillStyle = '#facc15';
+                for (let i = 0; i < 8; i++) {
+                    sceneCtx.fillText('⭐', w * (0.25 + i * 0.07), h * (0.34 + Math.sin(now / 130 + i) * 0.025));
+                }
+            }
+
+            // 다리 인식 상태 표시
+            if (currentLandmarks) {
+                sceneCtx.fillStyle = 'rgba(0,0,0,0.6)';
+                sceneCtx.beginPath();
+                sceneCtx.roundRect(10, 10, 270, 96, 10);
+                sceneCtx.fill();
+                sceneCtx.fillStyle = '#fff';
+                sceneCtx.font = '900 20px Inter';
+                sceneCtx.textAlign = 'left';
+                sceneCtx.textBaseline = 'top';
+                const rightVisible = isLegVisibleForDisplay('right', currentLandmarks);
+                const leftVisible = isLegVisibleForDisplay('left', currentLandmarks);
+                sceneCtx.fillStyle = rightVisible ? '#bbf7d0' : '#fecaca';
+                sceneCtx.fillText(`오른발 ${rightVisible ? '인식됨' : '안됨'}`, 24, 28);
+                sceneCtx.fillStyle = leftVisible ? '#bbf7d0' : '#fecaca';
+                sceneCtx.fillText(`왼발 ${leftVisible ? '인식됨' : '안됨'}`, 24, 62);
+            }
+        }
+
+        function drawLegMarkers() {
+            const w = sceneCanvas.width;
+            const h = sceneCanvas.height;
+            const now = performance.now();
+            [
+                ['오른발', legs.right, '#3b82f6', 'right'],
+                ['왼발', legs.left, '#22c55e', 'left']
+            ].forEach(([label, leg, color, side]) => {
+                if (!leg.visible) return;
+                const x = leg.footX * w;
+                const y = leg.footY * h;
+
+                // 성공 효과 (원형 퍼짐)
+                activeEffects = activeEffects.filter(e => now - e.t < e.duration);
+                activeEffects.forEach(e => {
+                    if (e.side === side && e.type === 'success') {
+                        const progress = (now - e.t) / e.duration;
+                        sceneCtx.beginPath();
+                        sceneCtx.arc(x, y, 26 + progress * 40, 0, Math.PI * 2);
+                        sceneCtx.strokeStyle = `rgba(34, 197, 94, ${1 - progress})`;
+                        sceneCtx.lineWidth = 6;
+                        sceneCtx.stroke();
+                    }
+                });
+
+                sceneCtx.fillStyle = color;
+                sceneCtx.beginPath();
+                sceneCtx.arc(x, y, 26, 0, Math.PI * 2);
+                sceneCtx.fill();
+                sceneCtx.strokeStyle = '#fff';
+                sceneCtx.lineWidth = 5;
+                sceneCtx.stroke();
+                sceneCtx.fillStyle = '#fff';
+                sceneCtx.font = '900 15px Inter';
+                sceneCtx.textAlign = 'center';
+                sceneCtx.textBaseline = 'middle';
+                sceneCtx.fillText(label, x, y);
+
+                // 발목이 올라갔을 때 위쪽 화살표 효과
+                const state = motion[side];
+                if (state && state.raised) {
+                    sceneCtx.fillStyle = '#facc15';
+                    sceneCtx.font = '900 24px Inter';
+                    sceneCtx.fillText('⬆️', x, y - 45 - Math.sin(now / 150) * 5);
+                }
+            });
+        }
+
+        function gameLoop(now = performance.now()) {
+            sceneCtx.clearRect(0, 0, sceneCanvas.width, sceneCanvas.height);
+            drawScene(now);
+            drawLegMarkers();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function legLiftCycle(side) {
+            const leg = legs[side];
+            const state = motion[side];
+            if (!leg.visible) return false;
+            ensureFootBaseline(state, leg);
+            
+            if (!state.raised && !state.waitingDown) updateFootBaseline(state, leg);
+
+            const liftAmount = getFootLiftAmount(leg, state);
+            if (liftAmount > 0.006 && frameLogCounter % 15 === 0) {
+                console.log(`[DEBUG] ${side} 발 이동량(liftAmount): ${liftAmount.toFixed(3)} (목표: >${getLiftThreshold()})`);
+            }
+
+            if (!state.raised && !state.waitingDown && liftAmount > getLiftThreshold()) {
+                state.raised = true;
+                state.waitingDown = true;
+                console.log(`[DEBUG] ${side} 발 상승 인식됨`);
+                return true;
+            }
+            if (state.waitingDown && liftAmount < getDownThreshold()) {
+                state.raised = false;
+                state.waitingDown = false;
+                state.baseline = getFootPoints(leg);
+            }
+            return false;
+        }
+
+        function getLiftThreshold() {
+            if (config.diff === 'hard') return 0.04;
+            if (config.diff === 'normal') return 0.025;
+            return 0.015;
+        }
+
+        function getDownThreshold() {
+            return Math.max(0.004, getLiftThreshold() * 0.35);
+        }
+
+        function getFootPoints(leg) {
+            const points = {};
+            if ((leg.ankleVis || 0) >= 0.1) points.ankle = leg.ankleY;
+            if ((leg.heelVis || 0) >= 0.1) points.heel = leg.heelY;
+            if ((leg.footIndexVis || 0) >= 0.1) points.footIndex = leg.footIndexY;
+            if (!Object.keys(points).length) points.ankle = leg.ankleY;
+            return points;
+        }
+
+        function ensureFootBaseline(state, leg) {
+            if (state.baseline && typeof state.baseline === 'object') return;
+            state.baseline = getFootPoints(leg);
+        }
+
+        function updateFootBaseline(state, leg) {
+            const points = getFootPoints(leg);
+            Object.keys(points).forEach(key => {
+                if (typeof points[key] !== 'number' || !Number.isFinite(points[key])) return;
+                if (typeof state.baseline[key] !== 'number') state.baseline[key] = points[key];
+                state.baseline[key] = Math.max(state.baseline[key] * 0.9 + points[key] * 0.1, points[key]);
+            });
+        }
+
+        function getFootLiftAmount(leg, state) {
+            ensureFootBaseline(state, leg);
+            const points = getFootPoints(leg);
+            return Math.max(...Object.keys(points).map(key => {
+                if (typeof points[key] !== 'number' || typeof state.baseline[key] !== 'number') return 0;
+                return state.baseline[key] - points[key];
+            }));
+        }
+
+        function getLiftAmount(side) {
+            const leg = legs[side];
+            const state = motion[side];
+            if (!leg.visible) return 0;
+            return getFootLiftAmount(leg, state);
+        }
+
+        function registerSuccess() {
+            const stage = currentStage();
+            console.log(`[DEBUG] 카운트 성공! (${stage.key})`);
+            counts[stage.key]++;
+            score++;
+            updateScoreText();
+            if (counts[stage.key] === 1) feedback = { text: '좋아요!', t: performance.now() };
+            else if (counts[stage.key] === 3) feedback = { text: '무리하지 않고 잘하셨어요!', t: performance.now() };
+            else if (counts[stage.key] >= 5) feedback = { text: '좋아요!', t: performance.now() };
+
+            if (counts[stage.key] >= 5) {
+                stageIndex++;
+                if (stageIndex >= stages.length) {
+                    stageIndex = 0;
+                    counts = { right: 0, left: 0 };
+                    feedback = { text: '잘했어요!', t: performance.now() };
+                }
+                resetMotionState();
+            } else {
+                attemptStartedAt = performance.now();
+            }
+            const next = currentStage();
+            setGuideMessage(next.guide, `${next.label} ${counts[next.key] || 0} / 5`);
+            updateScoreText();
+        }
+
+        function isWaitingForFootDown() {
+            return !!(motion.right?.waitingDown || motion.left?.waitingDown);
+        }
+
+        function checkLegMotion() {
+            if (!isExercising) return;
+            const now = performance.now();
+            const stage = currentStage();
+
+            if (now - exerciseStartedAt < 2000) {
+                ['right', 'left'].forEach(side => {
+                    if (legs[side].visible) {
+                        const state = motion[side];
+                        ensureFootBaseline(state, legs[side]);
+                        updateFootBaseline(state, legs[side]);
+                    }
+                });
+                if (frameLogCounter % 30 === 0) {
+                    console.log('[DEBUG] 기본 자세 baseline 저장 중...');
+                }
+                setGuideMessage('발을 바닥에 내려놓고 기다려주세요.', '기준 자세를 저장합니다.');
+                return;
+            }
+
+            if (now - attemptStartedAt > 3000) {
+                if (isWaitingForFootDown()) {
+                    setGuideMessage('좋아요! 이제 발을 다시 내려주세요.', '발이 내려오면 다음 카운트를 준비합니다.');
+                    return;
+                }
+                resetMotionState();
+                setGuideMessage(stage.guide, '높이 들지 않아도 됩니다. 발을 바닥에서 살짝만 들어 올려도 성공입니다.');
+                return;
+            }
+            if (stage.key === 'right' && legLiftCycle('right')) { activeEffects.push({ type: 'success', side: 'right', t: performance.now(), duration: 800 }); registerSuccess(); }
+            if (stage.key === 'left' && legLiftCycle('left')) { activeEffects.push({ type: 'success', side: 'left', t: performance.now(), duration: 800 }); registerSuccess(); }
+        }
+
+        const pose = new Pose({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+        pose.setOptions({ modelComplexity: 0, smoothLandmarks: true, selfieMode: true, minDetectionConfidence: 0.35, minTrackingConfidence: 0.35 });
+        console.log("[DEBUG] MediaPipe Pose 로드 시도 중...");
+        pose.onResults(results => {
+            frameLogCounter++;
+            poseCtx.save();
+            poseCtx.clearRect(0, 0, poseCanvas.width, poseCanvas.height);
+            if (results.poseLandmarks) {
+                poseLostFrames = 0;
+                if (!poseRecognized) {
+                    poseRecognized = true;
+                    console.log("[DEBUG] MediaPipe Pose 정상 로드 및 인식 완료");
+                    document.getElementById('pose-status').innerText = '신체 인식 완료';
+                    document.getElementById('pose-status').style.color = '#22c55e';
+                    if (!isExercising) prepareSelectedTeamStart();
+                }
+                const lm = results.poseLandmarks;
+                currentLandmarks = lm;
+                
+                if (frameLogCounter % 30 === 0) {
+                    if (lm && lm[25] && lm[26] && lm[27] && lm[28]) {
+                        console.log(`[DEBUG] 관절 좌표 & Visibility (1초 주기) - 
+                        L_Knee(vis:${lm[25].visibility.toFixed(2)}, y:${lm[25].y.toFixed(3)}), 
+                        R_Knee(vis:${lm[26].visibility.toFixed(2)}, y:${lm[26].y.toFixed(3)}), 
+                        L_Ankle(vis:${lm[27].visibility.toFixed(2)}, y:${lm[27].y.toFixed(3)}), 
+                        R_Ankle(vis:${lm[28].visibility.toFixed(2)}, y:${lm[28].y.toFixed(3)})`);
+                    } else {
+                        console.log(`[DEBUG] 관절 인식 안 됨 (lm 정보 부족)`);
+                    }
+                }
+
+                try {
+                    drawSimplifiedPose(poseCtx, lm, poseCanvas.width, poseCanvas.height);
+                    updateLeg('left', lm[25], lm[27], lm[29], lm[31]);
+                    updateLeg('right', lm[26], lm[28], lm[30], lm[32]);
+                    checkLegMotion();
+                } catch (err) {
+                    document.getElementById('pose-status').innerText = '다리 인식 준비 중입니다. 무릎과 발이 보이게 앉아주세요';
+                    document.getElementById('pose-status').style.color = '#f59e0b';
+                    console.warn('[Pose 처리 오류]', err);
+                }
+            } else {
+                poseLostFrames++;
+                if (!poseRecognized && poseLostFrames > 12) {
+                    document.getElementById('pose-status').innerText = '발끝이 화면 아래로 잘리면 인식되지 않습니다. 카메라에서 조금 뒤로 앉아주세요';
+                    document.getElementById('pose-status').style.color = '#f59e0b';
+                }
+                if (poseLostFrames > 25 && poseRecognized) {
+                    poseRecognized = false;
+                    legs.right.visible = false;
+                    legs.left.visible = false;
+                    document.getElementById('pose-status').innerText = '발끝이 화면 아래로 잘리면 인식되지 않습니다. 카메라에서 조금 뒤로 앉아주세요';
+                    document.getElementById('pose-status').style.color = '#ef4444';
+                }
+            }
+            poseCtx.restore();
+        });
+
+        function updateLeg(side, knee, ankle, heel, footIndex) {
+            if (!knee || !ankle) {
+                legs[side] = { visible: false, kneeY: 0, ankleY: 0, heelY: 0, footIndexY: 0, footX: 0, footY: 0 };
+                return;
+            }
+            const footVisible = (ankle.visibility || 0) >= 0.2 || (heel?.visibility || 0) >= 0.2 || (footIndex?.visibility || 0) >= 0.2;
+            const visible = (knee.visibility || 0) >= 0.2 && footVisible;
+            const marker = footIndex || heel || ankle;
+            legs[side] = {
+                visible,
+                kneeY: knee.y,
+                ankleY: ankle.y,
+                ankleVis: ankle.visibility || 0,
+                heelY: heel ? heel.y : ankle.y,
+                heelVis: heel?.visibility || 0,
+                footIndexY: footIndex ? footIndex.y : ankle.y,
+                footIndexVis: footIndex?.visibility || 0,
+                footX: 1 - marker.x,
+                footY: marker.y
+            };
+        }
+
+        function isVisiblePoint(point, min = 0.1) {
+            return !!point && (point.visibility === undefined || point.visibility >= min);
+        }
+
+        function isLegVisibleForDisplay(side, lm) {
+            const idx = side === 'right'
+                ? { knee: 26, ankle: 28, heel: 30, foot: 32 }
+                : { knee: 25, ankle: 27, heel: 29, foot: 31 };
+            return isVisiblePoint(lm[idx.knee], 0.1) && (
+                isVisiblePoint(lm[idx.ankle], 0.1) ||
+                isVisiblePoint(lm[idx.heel], 0.1) ||
+                isVisiblePoint(lm[idx.foot], 0.1)
+            );
+        }
+
+        function drawPosePoint(ctx, point, label, color, w, h) {
+            if (!isVisiblePoint(point, 0.1)) return;
+            const x = point.x * w;
+            const y = point.y * h;
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+            ctx.font = '900 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = 'rgba(0,0,0,.7)';
+            ctx.lineWidth = 4;
+            ctx.strokeText(label, x, y - 14);
+            ctx.fillText(label, x, y - 14);
+        }
+
+        function drawPoseLine(ctx, a, b, color, w, h) {
+            if (!isVisiblePoint(a, 0.1) || !isVisiblePoint(b, 0.1)) return;
+            ctx.beginPath();
+            ctx.moveTo(a.x * w, a.y * h);
+            ctx.lineTo(b.x * w, b.y * h);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 7;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        function drawSimplifiedPose(ctx, lm, w, h) {
+            const targetIdx = [25, 26, 27, 28, 29, 30, 31, 32]; // 무릎, 발목, 뒤꿈치, 발끝
+            targetIdx.forEach(i => {
+                if (!lm[i]) return;
+                if (!smoothedLM[i]) {
+                    smoothedLM[i] = { x: lm[i].x, y: lm[i].y, vis: lm[i].visibility };
+                } else {
+                    smoothedLM[i].x = smoothedLM[i].x * 0.7 + lm[i].x * 0.3;
+                    smoothedLM[i].y = smoothedLM[i].y * 0.7 + lm[i].y * 0.3;
+                    smoothedLM[i].vis = lm[i].visibility;
+                }
+            });
+
+            drawPoseLine(ctx, smoothedLM[25], smoothedLM[27], 'rgba(34,197,94,.92)', w, h);
+            drawPoseLine(ctx, smoothedLM[27], smoothedLM[29], 'rgba(34,197,94,.72)', w, h);
+            drawPoseLine(ctx, smoothedLM[27], smoothedLM[31], 'rgba(34,197,94,.72)', w, h);
+            drawPoseLine(ctx, smoothedLM[26], smoothedLM[28], 'rgba(59,130,246,.92)', w, h);
+            drawPoseLine(ctx, smoothedLM[28], smoothedLM[30], 'rgba(59,130,246,.72)', w, h);
+            drawPoseLine(ctx, smoothedLM[28], smoothedLM[32], 'rgba(59,130,246,.72)', w, h);
+
+            drawPosePoint(ctx, smoothedLM[25], '왼무릎', '#22c55e', w, h);
+            drawPosePoint(ctx, smoothedLM[27], '왼발목', '#16a34a', w, h);
+            drawPosePoint(ctx, smoothedLM[29], '왼뒤꿈치', '#84cc16', w, h);
+            drawPosePoint(ctx, smoothedLM[31], '왼발끝', '#a3e635', w, h);
+            drawPosePoint(ctx, smoothedLM[26], '오른무릎', '#3b82f6', w, h);
+            drawPosePoint(ctx, smoothedLM[28], '오른발목', '#2563eb', w, h);
+            drawPosePoint(ctx, smoothedLM[30], '오른뒤꿈치', '#60a5fa', w, h);
+            drawPosePoint(ctx, smoothedLM[32], '오른발끝', '#93c5fd', w, h);
+        }
+
+        function startCamera() {
+            const btnCam = document.getElementById('btn-camera');
+            btnCam.innerText = '카메라 로딩중...';
+            btnCam.style.opacity = '.7';
+            document.getElementById('pose-status').innerText = '카메라 권한을 허용해주세요...';
+            camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    try {
+                        await pose.send({ image: videoElement });
+                    } catch (err) {
+                        document.getElementById('pose-status').innerText = '신체 인식 로딩 중입니다. 잠시만 기다려주세요';
+                        document.getElementById('pose-status').style.color = '#f59e0b';
+                        console.warn('[Pose 프레임 전달 오류]', err);
+                    }
+                },
+                width: 1280,
+                height: 720
+            });
+            camera.start().then(() => {
+                console.log("[DEBUG] 카메라 정상 시작됨");
+                btnCam.innerText = '카메라 켜짐';
+                btnCam.disabled = true;
+                document.getElementById('pose-status').innerText = '허리부터 무릎, 발까지 보이게 앉아주세요';
+                document.getElementById('pose-status').style.color = '#ef4444';
+            }).catch(err => {
+                document.getElementById('pose-status').innerText = '카메라 오류: ' + err.message;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-start').addEventListener('click', () => {
+                currentPlayer = 1;
+                teamRunTotalScore = 0;
+                resetExerciseRoundState();
+                document.getElementById('settings-panel').classList.add('hidden');
+                document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+                runCountdownThenStart();
+            });
+            prepareSelectedTeamStart();
+        });
+
+        function startGame() {
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('top-bar').classList.add('active');
+            document.getElementById('guide-overlay').style.display = 'block';
+            resetExerciseRoundState();
+            document.getElementById('ui-title').innerHTML = config.mode === 'group'
+                ? `${teamNames[config.team]} <span style="font-size:18px;">${currentPlayer}번 참가자</span>`
+                : '튼튼다리 개인모드';
+            const stage = currentStage();
+            setGuideMessage(stage.guide, `${stage.label} 0 / 5`);
+            if (!isGameLoopRunning) {
+                isGameLoopRunning = true;
+                gameLoop();
+            }
+            isExercising = true;
+            exerciseStartedAt = performance.now();
+            attemptStartedAt = performance.now();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
+                if (timeLeft <= 0) endExercise();
+            }, 1000);
+        }
+
+        function endExercise() {
+            isExercising = false;
+            clearInterval(timerInterval);
+            document.getElementById('top-bar').classList.remove('active');
+            document.getElementById('guide-overlay').style.display = 'none';
+            document.getElementById('result-screen').classList.add('active');
+            document.getElementById('res-score').innerText = `성공 ${score}회`;
+            document.getElementById('res-time').innerText = `운동 시간: ${config.time}초`;
+            if (config.mode === 'group') {
+                teamRunTotalScore += score;
+                document.getElementById('res-subtitle').innerText = '잘했어요!';
+                document.getElementById('res-title').innerText = `${teamNames[config.team]} ${currentPlayer}번 참가자 완료`;
+                if (currentPlayer < parseInt(config.players)) {
+                    document.getElementById('res-next-notice').style.display = 'block';
+                    document.getElementById('res-btn').innerText = '다음 참가자 시작하기';
+                } else {
+                    teamScores[config.team] += teamRunTotalScore;
+                    teamCompleted[config.team] = true;
+                    saveTeamProgress();
+                    document.getElementById('res-next-notice').style.display = 'none';
+                    document.getElementById('res-btn').innerText = allTeamsCompleted() ? '세 팀 결과 보기' : '다른 팀 선택하기';
+                }
+            } else {
+                document.getElementById('res-subtitle').innerText = '잘했어요!';
+                document.getElementById('res-title').innerText = '수고하셨습니다';
+                document.getElementById('res-next-notice').style.display = 'none';
+                document.getElementById('res-btn').innerText = '다시 시작하기';
+                fireConfetti('confetti-single');
+            }
+        }
+
+        function nextAction() {
+            document.getElementById('result-screen').classList.remove('active');
+            document.getElementById('scoreboard-screen').classList.remove('active');
+            if (config.mode === 'group') {
+                if (currentPlayer >= parseInt(config.players)) {
+                    if (allTeamsCompleted()) showScoreboard();
+                    else showSettingsForNextTeam();
+                    return;
+                }
+                currentPlayer++;
+            }
+            resetExerciseRoundState();
+            runCountdownThenStart();
+        }
+
+        function showScoreboard() {
+            document.getElementById('settings-panel').classList.add('hidden');
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('scoreboard-screen').classList.add('active');
+            const completedCount = orderedTeams.filter(team => teamCompleted[team]).length;
+            let maxScore = -1;
+            const html = [];
+            orderedTeams.forEach(team => {
+                const scoreText = teamCompleted[team] ? `<span style="color:#22c55e">${teamScores[team]}</span>회` : `<span style="color:#94a3b8">미완료</span>`;
+                html.push(`<div style="margin-bottom:20px;">${teamNames[team]} : ${scoreText}</div>`);
+                if (teamCompleted[team] && teamScores[team] > maxScore) maxScore = teamScores[team];
+            });
+            const winners = orderedTeams.filter(team => teamCompleted[team] && teamScores[team] === maxScore).map(team => plainNames[team]);
+            document.getElementById('score-list').innerHTML = html.join('');
+            if (completedCount === 3 && winners.length > 1) {
+                document.getElementById('score-winner').innerText = `1등: ${winners.join(' / ')} 공동 1등 (${maxScore}회)`;
+                fireConfetti('confetti');
+            } else if (completedCount === 3 && winners.length === 1) {
+                document.getElementById('score-winner').innerText = `1등: ${winners[0]} (${maxScore}회)`;
+                fireConfetti('confetti');
+            } else if (completedCount > 0) {
+                document.getElementById('score-winner').innerText = `진행 중: ${completedCount}/3팀 완료`;
+            } else {
+                document.getElementById('score-winner').innerText = '아직 기록이 없습니다.';
+            }
+        }
+
+        function closeScoreboard() {
+            document.getElementById('scoreboard-screen').classList.remove('active');
+            document.getElementById('settings-panel').classList.remove('hidden');
+            prepareSelectedTeamStart();
+        }
+
+        function fireConfetti(canvasId) {
+            const confCanvas = document.getElementById(canvasId);
+            const ctx = confCanvas.getContext('2d');
+            confCanvas.width = window.innerWidth;
+            confCanvas.height = window.innerHeight;
+            let particles = [];
+            const colors = ['#84cc16', '#22c55e', '#38bdf8', '#f59e0b', '#facc15'];
+            for (let i = 0; i < 150; i++) particles.push({ x: Math.random() * confCanvas.width, y: Math.random() * confCanvas.height - confCanvas.height, size: Math.random() * 15 + 5, color: colors[Math.floor(Math.random() * colors.length)], speed: Math.random() * 5 + 2, angle: Math.random() * 360 });
+            function render() {
+                if (isExercising && canvasId === 'confetti-single') return;
+                ctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+                particles.forEach(p => {
+                    p.y += p.speed;
+                    p.x += Math.sin(p.angle) * 2;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    if (p.y > confCanvas.height) p.y = -20;
+                });
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+    </script>
+</body>
+</html>

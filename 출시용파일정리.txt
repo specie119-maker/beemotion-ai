@@ -1,0 +1,42 @@
+
+[출시용 파일 정리]
+
+프로그램명:
+동물 산책시키기 → 산책하기
+
+파일명:
+walk.html 유지
+
+GitHub에 업로드할 최종 파일:
+- index.html
+- walk.html
+- grab.html
+- fruit.html
+- steering_feel.html
+- market.html
+- assets 폴더 전체
+
+주의:
+html에서 참조하는 이미지, 영상 파일이 assets 안에 모두 있어야 함.
+테스트용 백업 파일은 GitHub에 올리지 말 것.
+사용하지 않는 예전 html 파일도 제외.
+
+
+프로그램명 변경:
+동물 산책시키기 → 산책하기
+
+GitHub 업로드 대상:
+
+index.html
+walk.html
+grab.html
+fruit.html
+steering_feel.html
+market.html
+
+assets/
+- 이미지 파일
+- 영상 파일
+- 강아지/과일/시장 관련 리소스
+
+

@@ -1,0 +1,278 @@
+손으로 잡고 넣기 운동 개인모드 화면 수정 요청
+
+1. 손 인식 표시 수정
+- MediaPipe 손가락 인식 기능을 적용해 주세요.
+- 손이 인식되면 손 관절 위치에 초록색 점과 선으로 손 모양이 표시되도록 해 주세요.
+- 손바닥만 닿는 것이 아니라 손가락이 구부러진 상태를 감지해 잡기 동작으로 처리해 주세요.
+
+2. 이미지 배경 제거
+- 공, 별, 강아지, 판다, 돈, 바구니 이미지의 흰색 배경을 제거해 주세요.
+- 모든 이미지는 투명 배경 PNG처럼 보이게 처리해 주세요.
+- 화면에 흰색 사각형 배경이 보이지 않도록 수정해 주세요.
+
+3. 잡기 동작 규칙
+- 물체 근처에 손이 오면 바로 점수 처리하지 마세요.
+- 손가락을 구부려 잡는 동작이 감지될 때만 물체가 손에 붙도록 해 주세요.
+- 손이 이동하면 물체도 손을 따라 이동하게 해 주세요.
+
+4. 바구니 넣기 판정 수정
+- 바구니 이미지 전체가 아니라 바구니 안쪽 입구 영역을 dropZone으로 설정해 주세요.
+- 손에 잡은 물체가 바구니 안쪽 dropZone 안에 있을 때 손을 펴면 성공 처리해 주세요.
+- 성공 시 성공개수 +1점 처리해 주세요.
+
+5. 실패 처리
+- 물체가 바구니 밖에서 손에서 떨어지면 점수 처리하지 마세요.
+- 바구니 아래로 그냥 떨어지는 경우도 실패 처리해 주세요.
+- 실패한 물체는 화면 아래로 사라지게 해 주세요.
+
+6. 바구니 안에 쌓이는 시각화
+- 성공한 물체는 바구니 밑으로 떨어지지 않게 해 주세요.
+- 성공하면 물체가 바구니 안쪽에 작게 배치되어 쌓이는 이미지로 남게 해 주세요.
+- 여러 개 성공하면 바구니 안에 물체들이 자연스럽게 쌓여 보이도록 해 주세요.
+- 바구니 이미지보다 뒤에 숨지 않도록 z-index를 조정해 주세요.
+
+7. 화면 배치
+- 바구니는 화면 하단 중앙에 고정
+- 물체는 위에서 내려오되 바구니 안에 들어간 뒤에는 고정
+- 성공개수와 남은시간은 상단에 크게 표시
+
+현재 문제:
+- 공 이미지에 흰 배경이 보임
+- 바구니 이미지에도 흰 배경이 보임
+- 손 인식 점이 보이지 않음
+- 공을 잡아 넣어도 바구니 안에 쌓이지 않고 바구니 밑으로 떨어짐
+
+이 문제를 우선 수정한 후에 
+
+손으로 잡고 넣기 운동 - 단체모드 기능 추가 및 수정
+
+================================
+1. 단체모드 시작 설정 화면
+================================
+
+단체모드 선택 시 아래 버튼 생성
+
+1) 팀 선택
+
+큰 원색 버튼
+
+🔴 빨강팀
+🔵 파랑팀
+🟢 초록팀
+
+
+2) 참가 인원 선택
+
+버튼:
+
+2명
+3명
+4명
+
+
+3) 운동 시간 선택
+
+10초
+30초
+60초
+
+
+4) 속도 선택
+
+보통
+빠르게
+
+
+5) 시작하기 버튼
+
+
+================================
+2. 단체 릴레이 진행 방식
+================================
+
+예)
+
+빨강팀 선택
+인원 3명
+시간 30초 선택
+
+
+진행:
+
+빨강팀 1번 참가자 시작
+
+↓
+
+
+상단 표시:
+
+🔴 빨강팀
+1번 참가자
+
+남은시간 30초
+
+성공 0개
+
+
+↓
+
+
+30초 종료
+
+
+자동 정지
+
+
+화면 중앙 안내:
+
+=================
+
+수고하셨습니다.
+
+1번 참가자 기록:
+10개 성공
+
+다음 참가자 준비하세요
+
+=================
+
+
+화면 하단 중앙:
+
+[시작하기]
+
+
+버튼 생성
+
+
+※ 다시 메뉴 설정 화면으로 돌아가지 않음
+※ 다음 사람이 바로 시작할 수 있게 함
+
+
+================================
+3. 다음 참가자 이동
+================================
+
+시작하기 클릭
+
+↓
+
+빨강팀 2번 참가자 운동 시작
+
+↓
+
+종료
+
+↓
+
+다음 참가자 준비
+
+
+반복
+
+
+선택한 인원이 모두 완료될 때까지 진행
+
+
+================================
+4. 팀별 점수 저장
+================================
+
+각 참가자 성공 개수 저장
+
+
+예:
+
+빨강팀
+
+1번 : 10개
+2번 : 8개
+3번 : 12개
+
+총점 : 30개
+
+
+파랑팀
+
+1번 : 7개
+2번 : 10개
+3번 : 8개
+
+총점 : 25개
+
+
+================================
+5. 최종 결과 화면
+================================
+
+모든 팀 운동 완료 후
+
+
+팀별 결과 표시:
+
+🔴 빨강팀 30개
+
+🔵 파랑팀 25개
+
+🟢 초록팀 20개
+
+
+가장 높은 점수 팀 선정
+
+
+출력:
+
+🎉 축하합니다 🎉
+
+🔴 빨강팀 승리하셨습니다!
+
+
+반짝이 효과
+폭죽 효과
+박수 효과 출력
+
+
+================================
+6. 화면 디자인
+================================
+
+운동 중에는 설정 메뉴 숨김
+
+
+상단:
+
+왼쪽:
+남은시간
+
+가운데:
+손으로 잡고 넣기 운동
+
+오른쪽:
+성공 개수
+
+
+하단 중앙:
+
+다음 참가자 시작 버튼
+
+
+큰 글씨 적용
+
+2m 거리에서도 보이는 크기로 설정
+오후 2:10
+Prioritizing Tool Usage
+
+I'm now focusing on tool selection, emphasizing specific tools over general ones where possible. The goal is to optimize efficiency by leveraging tools tailored to particular tasks, like viewing files. This strategy promises a more targeted and less error-prone approach to problem-solving, which I will continue to refine and implement moving forward.
+
+Developing a Task Strategy
+
+I've just recalled the critical instructions regarding tool usage, particularly avoiding common pitfalls with commands like cat, grep, and ls. I'm now crafting a robust strategy for implementing the modifications to exercise.html. This involves breaking down the logic changes into manageable modules, from image background removal to score tracking, and thinking through which tools are best suited to each segment. My goal is to maximize efficiency and minimize potential errors.
+
+Refining Visualization & Logic
+
+I'm now zeroing in on the hand tracking display, specifically the visibility of the hand skeleton. I'll thoroughly inspect the drawing logic, as well as considering whether the video feed, or the canvas visibility, are the cause for any issues. Additionally, I am formulating a plan for white background processing of image assets. Rather than using bash, I'll write a Python script for generating transparent backgrounds in PNGs. This is in addition to the logic refinement for the grab action.
+
+Defining Group Mechanics
+
+I'm now focusing on defining the group game mechanics. I'm setting a drop zone within the basket image, and designing the fail condition. Successfully dropped items must stack in the basket. For group mode, I'm thinking about team selection (Red, Blue, Green), and player count options. The relay's flow involves individual player rounds with scores saved and displayed. Crucially, the system should allow multiple teams to compete in one session, displaying a final comparison of their total scores.
+

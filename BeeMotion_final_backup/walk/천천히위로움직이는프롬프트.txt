@@ -1,0 +1,5 @@
+16:9 카메라 돌리 인  기법으로 생성
+First person view walking forward through a traditional market alley,
+camera slowly moves forward,
+smooth dolly-in movement,
+market stalls passing on both sides 

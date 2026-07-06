@@ -1,0 +1,22 @@
+시장쇼핑하기 영상만들기
+가장 정확한 용어 ⭐⭐⭐
+- 카메라 돌리 인 (Dolly In / Push In)
+- 뜻:카메라가 피사체 쪽으로 앞으로 이동하는 효과
+
+효과:
+양쪽 가게가 옆으로 지나감
+길 끝이 가까워짐
+실제 걷는 느낌
+
+-프롬프트
+First person view walking forward through a traditional market alley,
+camera slowly moves forward,
+smooth dolly-in movement,
+market stalls passing on both sides
+
+북한강 둘래길 이미지 밝은 햇살과 푸른 하늘 맑고 환한 분위기로 산책하기 좋은 한강길 옆에 북한강이   보이는 이미지로 16:9 
+
+이 남산 둘래길 이미지 뒤에 남산타워가 보이는 밝은 햇살과 푸른 하늘 맑고 환한 분위기로 산책하기 좋은 남산길  이미지로 16:9 
+
+스톡홀름 감라스탄(Gamla Stan) 석양산책길 사람,텍스트 삭제하고 배경 이미지로만 생성 16:9
+

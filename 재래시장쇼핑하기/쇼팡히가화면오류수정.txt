@@ -1,0 +1,78 @@
+[재래시장 쇼핑하기 코드 오류 수정]
+
+현재 문제:
+화면에 영상이 나오지 않고 파란 배경만 보임.
+AI 몸 인식도 정상 작동하지 않음.
+
+원인:
+1. 영상 경로가 실제 파일과 맞지 않음.
+2. processWalkingMotion() 안에 정의되지 않은 변수 사용:
+   - stepsInWindow
+   - lastStepDelta
+3. gameLoop() 안에 정의되지 않은 변수 사용:
+   - cartWidth
+
+수정:
+
+1. 영상 파일 위치 확인
+실제 파일을 아래 경로에 넣고 이름을 맞춘다.
+
+assets/market/shopping1.mp4
+assets/market/shopping2.mp4
+assets/market/shopping3.mp4
+assets/market/shopping4.mp4
+assets/market/shopping5.mp4
+
+만약 파일이 .mov이면 코드 경로도 .mov로 바꾸거나 mp4로 변환한다.
+
+2. processWalkingMotion() 수정
+stepsInWindow, lastStepDelta 사용 금지.
+아래 방식으로 단순화한다.
+
+if (diffY > thresholdY || diffX > thresholdX) {
+    lastMotionTime = performance.now();
+}
+
+const now = performance.now();
+
+if (now - lastMotionTime < 1000) {
+    if (!walkingState) {
+        walkingState = true;
+        document.getElementById('marketVideo').play().catch(e => {});
+    }
+    registerStep();
+} else {
+    if (walkingState) {
+        walkingState = false;
+        document.getElementById('marketVideo').pause();
+    }
+}
+
+3. gameLoop() 수정
+cartWidth를 currentCartWidth로 모두 변경한다.
+
+기존:
+sceneCtx.drawImage(imgCart, cartX, cartY, cartWidth, cartHeight);
+
+수정:
+sceneCtx.drawImage(imgCart, cartX, cartY, currentCartWidth, cartHeight);
+
+기존:
+cartX + cartWidth - 80
+
+수정:
+cartX + currentCartWidth - 80
+
+4. 테스트
+콘솔에서 오류가 없어야 함.
+특히 다음 오류가 나오면 안 됨:
+ReferenceError: stepsInWindow is not defined
+ReferenceError: lastStepDelta is not defined
+ReferenceError: cartWidth is not defined
+
+완료 기준:
+- 시장 영상이 화면 전체에 보임
+- AI 몸 인식 초록 선 표시
+- 걸으면 영상 재생
+- 멈추면 영상 정지
+- 걸음수 증가

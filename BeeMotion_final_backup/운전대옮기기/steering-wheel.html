@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeMotion - 운전대 잡고 옮기기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { height: 100vh; display: flex; overflow: hidden; background: #f8fafc; color: #0f172a; }
+        #settings-panel { width: 450px; background: #fff; padding: 40px; box-shadow: 2px 0 20px rgba(0,0,0,.06); z-index: 100; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; }
+        #settings-panel.hidden { display: none; }
+        .settings-title { font-size: 30px; font-weight: 900; color: #06351f; }
+        .program-desc { font-size: 17px; line-height: 1.65; font-weight: 700; color: #475569; }
+        .settings-group { display: flex; flex-direction: column; gap: 10px; }
+        .settings-group label { font-size: 18px; font-weight: 900; color: #06351f; }
+        .radio-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        .radio-btn { flex: 1; padding: 13px 10px; border: 2px solid #e2e8f0; border-radius: 12px; text-align: center; cursor: pointer; font-weight: 800; background: #fff; user-select: none; }
+        .radio-btn.active { border-color: #22c55e; background: #ecfdf5; color: #047857; }
+        .btn-team.active[data-val="red"] { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+        .btn-team.active[data-val="blue"] { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+        .btn-team.active[data-val="green"] { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
+        .btn-action { background: #16a34a; color: #fff; border: 0; padding: 18px; border-radius: 16px; font-size: 20px; font-weight: 900; cursor: pointer; }
+        .btn-camera { background: #052e16; }
+        .btn-scoreboard { background: #f1f5f9; color: #475569; }
+        #exercise-area { flex: 1; position: relative; background: #000; overflow: hidden; }
+        #top-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px 40px; z-index: 70; display: none; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,.82), rgba(0,0,0,0)); }
+        #top-bar.active { display: flex; }
+        .top-stat { min-width: 190px; padding: 10px 24px; border-radius: 18px; background: rgba(255,255,255,.95); color: #064e3b; font-size: 28px; font-weight: 900; text-align: center; }
+        .top-title { color: #fff; font-size: 34px; font-weight: 900; text-align: center; text-shadow: 0 3px 12px rgba(0,0,0,.55); }
+        #video_input { display: none; }
+        #hand_canvas, #scene_canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        #hand_canvas { z-index: 20; }
+        #scene_canvas { z-index: 30; }
+        #guide-overlay { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); z-index: 60; width: min(820px, calc(100% - 60px)); padding: 22px 30px; border-radius: 18px; background: rgba(0,0,0,.70); color: #fff; border: 2px solid #22c55e; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: none; text-align: center; }
+        #guide-overlay .main-guide { font-size: 34px; font-weight: 900; color: #fff; margin-bottom: 10px; }
+        #guide-overlay .sub-guide { font-size: 22px; font-weight: 800; line-height: 1.45; color: #bbf7d0; }
+        .overlay-screen { position: absolute; inset: 0; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: rgba(248,250,252,.96); }
+        .overlay-screen.active { display: flex; }
+        .result-title { font-size: 68px; font-weight: 900; color: #06351f; margin-bottom: 20px; }
+        .result-score { font-size: 58px; font-weight: 900; color: #22c55e; margin-bottom: 28px; }
+        .team-score-list { font-size: 40px; font-weight: 800; text-align: left; margin-bottom: 45px; }
+        #countdown-screen { background: rgba(0,0,0,.88); }
+        #countdown-text { font-size: 240px; font-weight: 900; color: #22c55e; }
+        @media (max-width: 900px) {
+            body { display: block; }
+            #settings-panel { width: 100%; height: 100vh; }
+            #top-bar { padding: 14px; }
+            .top-stat { min-width: 120px; font-size: 18px; padding: 8px 12px; }
+            .top-title { font-size: 22px; }
+            #guide-overlay .main-guide { font-size: 26px; }
+            #guide-overlay .sub-guide { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="settings-panel">
+        <div class="settings-title">🚗 운전대 잡고 옮기기</div>
+        <div class="program-desc">
+            운전대를 움직여 목표 지점까지 이동해보세요.<br>팔 조절 능력과 방향 감각을 키우는 운동입니다.
+        </div>
+        <div class="settings-group">
+            <label>모드 선택</label>
+            <div class="radio-options" id="opt-mode">
+                <div class="radio-btn active" data-val="individual">👤 개인모드</div>
+                <div class="radio-btn" data-val="group">👥 단체모드</div>
+            </div>
+        </div>
+        <div id="group-settings" style="display: none; flex-direction: column; gap: 25px;">
+            <div class="settings-group">
+                <label>팀 선택</label>
+                <div class="radio-options" id="opt-team">
+                    <div class="radio-btn btn-team active" data-val="red">🔴 빨강팀</div>
+                    <div class="radio-btn btn-team" data-val="blue">🔵 파랑팀</div>
+                    <div class="radio-btn btn-team" data-val="green">🟢 초록팀</div>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label>참가 인원</label>
+                <div class="radio-options" id="opt-players">
+                    <div class="radio-btn" data-val="2">2명</div>
+                    <div class="radio-btn active" data-val="3">3명</div>
+                    <div class="radio-btn" data-val="4">4명</div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-group">
+            <label>난이도</label>
+            <div class="radio-options" id="opt-diff">
+                <div class="radio-btn active" data-val="easy">1단계 기본</div>
+                <div class="radio-btn" data-val="normal">2단계 강화</div>
+            </div>
+        </div>
+        <div class="settings-group">
+            <label>버티기 시간</label>
+            <div class="radio-options" id="opt-hold">
+                <div class="radio-btn active" data-val="10">10초</div>
+                <div class="radio-btn" data-val="15">15초</div>
+            </div>
+        </div>
+        <div class="settings-group">
+            <label>1인 운동 제한시간</label>
+            <div class="radio-options" id="opt-time">
+                <div class="radio-btn active" data-val="60">60초</div>
+                <div class="radio-btn" data-val="90">90초</div>
+            </div>
+        </div>
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <div id="hand-status" style="text-align:center; font-weight:900; color:#ef4444; font-size:18px;">카메라를 켜주세요</div>
+            <button class="btn-action btn-camera" id="btn-camera" onclick="startCamera()">카메라 켜기</button>
+            <button class="btn-action" id="btn-start">시작하기</button>
+            <button class="btn-action btn-scoreboard" onclick="showScoreboard()" id="btn-scoreboard" style="display:none;">🏆 모든 팀 결과 보기</button>
+            <button class="btn-action" style="background:#ef4444; display:none;" onclick="resetTeamScores()" id="btn-reset">전체 점수 초기화</button>
+        </div>
+        <div style="text-align:center;">
+            <a href="index.html" style="color:#666; font-weight:700; text-decoration:none;">돌아가기</a>
+        </div>
+    </div>
+
+    <div id="exercise-area">
+        <div id="top-bar">
+            <div class="top-stat" id="ui-time">남은시간 30초</div>
+            <div class="top-title" id="ui-title">운전대 잡고 옮기기</div>
+            <div class="top-stat" id="ui-score" style="color:#22c55e;">성공 0회</div>
+        </div>
+        <div id="guide-overlay">
+            <div class="main-guide">운전대를 잡아주세요</div>
+            <div class="sub-guide">양손 손가락 선이 운전대 좌우 손잡이에 닿으면 잡기 성공입니다.</div>
+        </div>
+        <video id="video_input" autoplay playsinline></video>
+        <canvas id="hand_canvas"></canvas>
+        <canvas id="scene_canvas"></canvas>
+
+        <div class="overlay-screen" id="countdown-screen">
+            <div id="countdown-text">3</div>
+        </div>
+        <div class="overlay-screen" id="result-screen">
+            <canvas id="confetti-single" style="position:absolute; width:100%; height:100%; pointer-events:none; z-index:-1;"></canvas>
+            <div style="font-size:40px; color:#666; font-weight:800; margin-bottom:10px;" id="res-subtitle"></div>
+            <div class="result-title" id="res-title">수고하셨습니다</div>
+            <div class="result-score" id="res-score">성공 0회</div>
+            <div class="result-score" id="res-time" style="font-size:36px; margin-bottom:50px; color:#06351f;">운동 시간: 0초</div>
+            <div id="res-next-notice" style="font-size:28px; margin-bottom:30px; color:#555; display:none;">다음 참가자 준비하세요.</div>
+            <button class="btn-action" style="padding:20px 60px; font-size:28px;" id="res-btn" onclick="nextAction()">다시 시작하기</button>
+        </div>
+        <div class="overlay-screen" id="scoreboard-screen">
+            <canvas id="confetti" style="position:absolute; width:100%; height:100%; pointer-events:none; z-index:-1;"></canvas>
+            <div class="result-title" style="font-size:86px; margin-bottom:10px;">🎉 결과 보기 🎉</div>
+            <div style="font-size:50px; font-weight:900; margin-bottom:40px; color:#16a34a;" id="score-winner"></div>
+            <div class="team-score-list" id="score-list"></div>
+            <button class="btn-action" style="padding:20px 60px; font-size:28px;" onclick="closeScoreboard()">처음으로 돌아가기</button>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const initMode = urlParams.get('mode') || 'individual';
+        const config = { mode: initMode, team: 'red', players: 3, time: 60, diff: 'easy', hold: 10 };
+        const teamNames = { red: '🔴 빨강팀', blue: '🔵 파랑팀', green: '🟢 초록팀' };
+        const plainNames = { red: '빨강팀', blue: '파랑팀', green: '초록팀' };
+        const orderedTeams = ['red', 'blue', 'green'];
+        const scoreKey = 'beeMotionSteeringTeamScores';
+        const completedKey = 'beeMotionSteeringTeamCompleted';
+        const dirKey = 'beeMotionSteeringTeamDirs';
+        let teamScores = { red: 0, blue: 0, green: 0 };
+        let teamCompleted = { red: false, blue: false, green: false };
+        let teamDirs = {
+            red: { right: 0, left: 0, up: 0, down: 0 },
+            blue: { right: 0, left: 0, up: 0, down: 0 },
+            green: { right: 0, left: 0, up: 0, down: 0 }
+        };
+        try { teamScores = { ...teamScores, ...JSON.parse(sessionStorage.getItem(scoreKey) || '{}') }; } catch(e) {}
+        try { teamCompleted = { ...teamCompleted, ...JSON.parse(sessionStorage.getItem(completedKey) || '{}') }; } catch(e) {}
+        try { teamDirs = { ...teamDirs, ...JSON.parse(sessionStorage.getItem(dirKey) || '{}') }; } catch(e) {}
+
+        const videoElement = document.getElementById('video_input');
+        const sceneCanvas = document.getElementById('scene_canvas');
+        const sceneCtx = sceneCanvas.getContext('2d');
+        const handCanvas = document.getElementById('hand_canvas');
+        const handCtx = handCanvas.getContext('2d');
+        let camera = null;
+        let isExercising = false;
+        let score = 0;
+        let timeLeft = 0;
+        let timerInterval = null;
+        let currentPlayer = 1;
+        let teamRunTotalScore = 0;
+        let isGameLoopRunning = false;
+        let handRecognized = false;
+        let handLostFrames = 0;
+        let currentTargetIndex = 0;
+        let target = 'right';
+        let wheel = { x: 0.5, y: 0.52, grabbed: false };
+        let lastWheel = null;
+        let stillSince = null;
+        let outOfTargetSince = null;
+        let holdProgress = 0;
+        let grabAnchor = null;
+        let feedback = { text: '', t: 0 };
+        let handsState = [];
+        const targets = ['right', 'left', 'up', 'down'];
+        const targetText = {
+            right: '오른쪽 목표지점으로 옮겨주세요',
+            left: '왼쪽 목표지점으로 옮겨주세요',
+            up: '위쪽 목표지점으로 올려주세요',
+            down: '아래쪽 목표지점으로 내려주세요'
+        };
+        const HAND_CONNECTIONS_CUSTOM = [
+            [0,1],[1,2],[2,3],[3,4],
+            [0,5],[5,6],[6,7],[7,8],
+            [0,9],[9,10],[10,11],[11,12],
+            [0,13],[13,14],[14,15],[15,16],
+            [0,17],[17,18],[18,19],[19,20],
+            [5,9],[9,13],[13,17],[5,17]
+        ];
+
+        function resizeCanvases() {
+            sceneCanvas.width = window.innerWidth;
+            sceneCanvas.height = window.innerHeight;
+            handCanvas.width = window.innerWidth;
+            handCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
+        function setupRadio(groupId, configKey) {
+            const container = document.getElementById(groupId);
+            if (!container) return;
+            container.querySelectorAll('.radio-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    config[configKey] = btn.getAttribute('data-val');
+                    if (configKey === 'team') {
+                        currentPlayer = 1;
+                        teamRunTotalScore = 0;
+                        prepareSelectedTeamStart();
+                    }
+                });
+            });
+        }
+        setupRadio('opt-team', 'team');
+        setupRadio('opt-players', 'players');
+        setupRadio('opt-diff', 'diff');
+        setupRadio('opt-time', 'time');
+        setupRadio('opt-hold', 'hold');
+        setupRadio('opt-mode', 'mode');
+
+        // 모드 전환 시 UI 변경
+        document.getElementById('opt-mode').addEventListener('click', (e) => {
+            if (e.target.classList.contains('radio-btn')) {
+                const isGroup = config.mode === 'group';
+                document.getElementById('group-settings').style.display = isGroup ? 'flex' : 'none';
+                document.getElementById('btn-scoreboard').style.display = isGroup ? 'block' : 'none';
+                document.getElementById('btn-reset').style.display = isGroup ? 'block' : 'none';
+                prepareSelectedTeamStart();
+            }
+        });
+        
+        // 초기 모드 동기화
+        if (config.mode === 'group') {
+            document.querySelector('#opt-mode .radio-btn[data-val="group"]').click();
+        } else {
+            document.querySelector('#opt-mode .radio-btn[data-val="individual"]').click();
+        }
+
+        function saveTeamProgress() {
+            sessionStorage.setItem(scoreKey, JSON.stringify(teamScores));
+            sessionStorage.setItem(completedKey, JSON.stringify(teamCompleted));
+            sessionStorage.setItem(dirKey, JSON.stringify(teamDirs));
+        }
+
+        function resetTeamScores() {
+            if (confirm('모든 팀의 운전대 기록을 초기화할까요?')) {
+                teamScores = { red: 0, blue: 0, green: 0 };
+                teamCompleted = { red: false, blue: false, green: false };
+                teamDirs = {
+                    red: { right: 0, left: 0, up: 0, down: 0 },
+                    blue: { right: 0, left: 0, up: 0, down: 0 },
+                    green: { right: 0, left: 0, up: 0, down: 0 }
+                };
+                saveTeamProgress();
+                alert('초기화되었습니다.');
+            }
+        }
+
+        function prepareSelectedTeamStart() {
+            const startBtn = document.getElementById('btn-start');
+            startBtn.disabled = false;
+            startBtn.style.opacity = '1';
+            startBtn.innerText = config.mode === 'group' ? `${teamNames[config.team]} 시작하기` : '시작하기';
+        }
+
+        function allTeamsCompleted() {
+            return orderedTeams.every(team => teamCompleted[team]);
+        }
+
+        function resetExerciseRoundState() {
+            isExercising = false;
+            score = 0;
+            timeLeft = parseInt(config.time);
+            wheel = { x: 0.5, y: 0.52, grabbed: false };
+            lastWheel = null;
+            stillSince = null;
+            outOfTargetSince = null;
+            grabAnchor = null;
+            holdProgress = 0;
+            feedback = { text: '', t: 0 };
+            currentTargetIndex = 0;
+            target = targets[currentTargetIndex];
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
+            updateTopBarScore();
+            setGuideMessage('운전대를 잡아주세요', '양손 손가락 선이 좌우 손잡이에 닿으면 잡기 성공입니다.');
+        }
+
+        function updateTopBarScore() {
+            if (config.mode === 'group') {
+                const dirs = teamDirs[config.team];
+                // Show current participant score + overall team score + directions
+                const total = teamScores[config.team] + teamRunTotalScore; // Live total including current run
+                document.getElementById('ui-score').innerHTML = 
+                    `<div style="font-size:18px; color:#666;">팀 통합 점수: ${total}회</div>
+                     <div style="font-size:20px; font-weight:800;">현재 참가자: ${score}회</div>
+                     <div style="font-size:16px; margin-top:4px; color:#475569;">
+                        ➡️${dirs.right} ⬅️${dirs.left} ⬆️${dirs.up} ⬇️${dirs.down}
+                     </div>`;
+            } else {
+                document.getElementById('ui-score').innerText = `성공 ${score}회`;
+            }
+        }
+
+        function showSettingsForNextTeam() {
+            resetExerciseRoundState();
+            currentPlayer = 1;
+            teamRunTotalScore = 0;
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('top-bar').classList.remove('active');
+            document.getElementById('settings-panel').classList.remove('hidden');
+            prepareSelectedTeamStart();
+        }
+
+        function runCountdownThenStart() {
+            const countdownScreen = document.getElementById('countdown-screen');
+            const countdownText = document.getElementById('countdown-text');
+            countdownScreen.classList.add('active');
+            let count = 3;
+            countdownText.innerText = count;
+            const countInt = setInterval(() => {
+                count--;
+                if (count > 0) countdownText.innerText = count;
+                else {
+                    clearInterval(countInt);
+                    countdownScreen.classList.remove('active');
+                    startGame();
+                }
+            }, 1000);
+        }
+
+
+
+        function wheelRadius() {
+            return Math.min(sceneCanvas.width, sceneCanvas.height) * 0.15;
+        }
+
+        function targetBox() {
+            const w = sceneCanvas.width;
+            const h = sceneCanvas.height;
+            let size, rx, lx, uy, dy;
+            
+            if (config.diff === 'easy') {
+                size = Math.min(w, h) * 0.25;
+                rx = 0.65; lx = 0.35;
+                uy = 0.35; dy = 0.65;
+            } else {
+                size = Math.min(w, h) * 0.15;
+                rx = 0.85; lx = 0.15;
+                uy = 0.15; dy = 0.85;
+            }
+
+            const map = {
+                right: { x: w * rx, y: h * 0.52, w: size, h: size },
+                left: { x: w * lx, y: h * 0.52, w: size, h: size },
+                up: { x: w * 0.50, y: h * uy, w: size, h: size },
+                down: { x: w * 0.50, y: h * dy, w: size, h: size }
+            };
+            return map[target];
+        }
+
+        function drawScene(now) {
+            const w = sceneCanvas.width;
+            const h = sceneCanvas.height;
+            sceneCtx.clearRect(0, 0, w, h);
+            drawTargetBox();
+            drawWheel();
+            drawHoldProgress();
+            drawFeedback(now);
+        }
+
+        function drawTargetBox() {
+            const box = targetBox();
+            sceneCtx.save();
+            sceneCtx.setLineDash([6, 8]);
+            sceneCtx.lineWidth = 3;
+            sceneCtx.strokeStyle = '#39ff14';
+            sceneCtx.shadowColor = '#39ff14';
+            sceneCtx.shadowBlur = 10;
+            sceneCtx.beginPath();
+            sceneCtx.roundRect(box.x - box.w / 2, box.y - box.h / 2, box.w, box.h, 20);
+            sceneCtx.stroke();
+            sceneCtx.setLineDash([]);
+            sceneCtx.fillStyle = '#fff';
+            sceneCtx.shadowBlur = 0;
+            sceneCtx.font = `900 ${Math.max(24, sceneCanvas.width * 0.024)}px Inter`;
+            sceneCtx.textAlign = 'center';
+            sceneCtx.textBaseline = 'middle';
+            sceneCtx.fillText(targetText[target], box.x, box.y);
+            sceneCtx.restore();
+        }
+
+        function drawWheel() {
+            const w = sceneCanvas.width;
+            const h = sceneCanvas.height;
+            const x = wheel.x * w;
+            const y = wheel.y * h;
+            const r = wheelRadius();
+            sceneCtx.save();
+            sceneCtx.translate(x, y);
+            sceneCtx.shadowColor = 'rgba(0,0,0,.9)';
+            sceneCtx.shadowBlur = 18;
+            sceneCtx.strokeStyle = wheel.grabbed ? '#39ff14' : '#e5e7eb';
+            sceneCtx.lineWidth = Math.max(18, r * 0.13);
+            sceneCtx.beginPath();
+            sceneCtx.arc(0, 0, r, 0, Math.PI * 2);
+            sceneCtx.stroke();
+            sceneCtx.lineWidth = Math.max(8, r * 0.06);
+            sceneCtx.beginPath();
+            sceneCtx.moveTo(-r * 0.82, 0);
+            sceneCtx.lineTo(r * 0.82, 0);
+            sceneCtx.moveTo(0, -r * 0.82);
+            sceneCtx.lineTo(0, r * 0.82);
+            sceneCtx.stroke();
+            sceneCtx.fillStyle = wheel.grabbed ? '#16a34a' : '#4b5563';
+            sceneCtx.beginPath();
+            sceneCtx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+            sceneCtx.fill();
+            sceneCtx.restore();
+        }
+
+        function drawHoldProgress() {
+            if (!holdProgress) return;
+            const w = sceneCanvas.width;
+            const h = sceneCanvas.height;
+            const holdLimit = parseInt(config.hold);
+            const currentSec = Math.floor(Math.min(holdLimit, holdProgress * holdLimit));
+            
+            const cx = w * 0.5;
+            const cy = h * 0.22;
+            const radius = Math.min(w, h) * 0.12; // Big circular timer
+            
+            sceneCtx.save();
+            
+            // Background circle
+            sceneCtx.beginPath();
+            sceneCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            sceneCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            sceneCtx.fill();
+            
+            // Background track
+            sceneCtx.beginPath();
+            sceneCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            sceneCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            sceneCtx.lineWidth = radius * 0.15;
+            sceneCtx.stroke();
+            
+            // Progress arc (green)
+            const startAngle = -Math.PI / 2;
+            const endAngle = startAngle + (Math.PI * 2 * Math.min(1, holdProgress));
+            sceneCtx.beginPath();
+            sceneCtx.arc(cx, cy, radius, startAngle, endAngle);
+            sceneCtx.strokeStyle = '#39ff14';
+            sceneCtx.lineCap = 'round';
+            sceneCtx.lineWidth = radius * 0.15;
+            sceneCtx.stroke();
+            
+            // Text inside circle
+            sceneCtx.fillStyle = '#fde047'; // Yellow text
+            sceneCtx.font = `900 ${radius * 0.45}px Inter`;
+            sceneCtx.textAlign = 'center';
+            sceneCtx.textBaseline = 'middle';
+            sceneCtx.shadowColor = 'rgba(0,0,0,0.8)';
+            sceneCtx.shadowBlur = 4;
+            sceneCtx.fillText(`${currentSec} / ${holdLimit}초`, cx, cy);
+            
+            // Text below circle
+            sceneCtx.fillStyle = '#ffffff';
+            sceneCtx.font = `800 ${radius * 0.35}px Inter`;
+            sceneCtx.textBaseline = 'top';
+            sceneCtx.shadowBlur = 8;
+            sceneCtx.fillText('그대로 버텨주세요', cx, cy + radius + 15);
+            
+            sceneCtx.restore();
+        }
+
+        function drawFeedback(now) {
+            if (!feedback.text || now - feedback.t > 1200) return;
+            sceneCtx.save();
+            sceneCtx.globalAlpha = 1 - (now - feedback.t) / 1200;
+            sceneCtx.fillStyle = '#fff';
+            sceneCtx.strokeStyle = '#16a34a';
+            sceneCtx.lineWidth = 8;
+            sceneCtx.font = `900 ${Math.max(48, sceneCanvas.width * 0.046)}px Inter`;
+            sceneCtx.textAlign = 'center';
+            sceneCtx.strokeText(feedback.text, sceneCanvas.width * 0.5, sceneCanvas.height * 0.43);
+            sceneCtx.fillText(feedback.text, sceneCanvas.width * 0.5, sceneCanvas.height * 0.43);
+            sceneCtx.restore();
+        }
+
+        function gameLoop(now = performance.now()) {
+            drawScene(now);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setGuideMessage(main, sub) {
+            const mainEl = document.querySelector('#guide-overlay .main-guide');
+            const subEl = document.querySelector('#guide-overlay .sub-guide');
+            if (mainEl) mainEl.innerText = main;
+            if (subEl) subEl.innerText = sub;
+        }
+
+        function toScreenPoint(point) {
+            return { x: (1 - point.x) * handCanvas.width, y: point.y * handCanvas.height };
+        }
+
+        function drawHands(results) {
+            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+            handsState = [];
+            if (!results.multiHandLandmarks) return;
+            results.multiHandLandmarks.forEach((landmarks, idx) => {
+                const points = landmarks.map(toScreenPoint);
+                const palm = points[9] || points[0];
+                handsState.push({ landmarks, points, palm, idx });
+                handCtx.save();
+                handCtx.setLineDash([2, 5]);
+                handCtx.lineWidth = 1.8;
+                handCtx.strokeStyle = '#39ff14';
+                handCtx.shadowColor = '#39ff14';
+                handCtx.shadowBlur = 4;
+                HAND_CONNECTIONS_CUSTOM.forEach(([a, b]) => {
+                    if (!points[a] || !points[b]) return;
+                    handCtx.beginPath();
+                    handCtx.moveTo(points[a].x, points[a].y);
+                    handCtx.lineTo(points[b].x, points[b].y);
+                    handCtx.stroke();
+                });
+                handCtx.setLineDash([]);
+                handCtx.fillStyle = '#39ff14';
+                points.forEach(point => {
+                    handCtx.beginPath();
+                    handCtx.arc(point.x, point.y, 3.2, 0, Math.PI * 2);
+                    handCtx.fill();
+                });
+                handCtx.restore();
+            });
+        }
+
+        function handlePositions() {
+            const r = wheelRadius();
+            const cx = wheel.x * sceneCanvas.width;
+            const cy = wheel.y * sceneCanvas.height;
+            return {
+                left: { x: cx - r * 0.92, y: cy },
+                right: { x: cx + r * 0.92, y: cy }
+            };
+        }
+
+        function nearestHandDistance(handle) {
+            if (!handsState.length) return Infinity;
+            return Math.min(...handsState.map(hand => Math.hypot(hand.palm.x - handle.x, hand.palm.y - handle.y)));
+        }
+
+        function updateGrabAndWheel() {
+            const handles = handlePositions();
+            const threshold = wheelRadius() * 0.55;
+            const leftOk = nearestHandDistance(handles.left) < threshold;
+            const rightOk = nearestHandDistance(handles.right) < threshold;
+            
+            const wasGrabbed = wheel.grabbed;
+            wheel.grabbed = handsState.length >= 2 && leftOk && rightOk;
+            
+            if (wheel.grabbed) {
+                const palms = handsState.slice(0, 2).map(hand => hand.palm);
+                const avgX = palms.reduce((sum, p) => sum + p.x, 0) / palms.length;
+                const avgY = palms.reduce((sum, p) => sum + p.y, 0) / palms.length;
+                const handX = avgX / sceneCanvas.width;
+                const handY = avgY / sceneCanvas.height;
+
+                if (!wasGrabbed) {
+                    grabAnchor = { handX, handY, wheelX: wheel.x, wheelY: wheel.y };
+                }
+
+                const isNormal = config.diff === 'normal';
+                let movementRatio = isNormal ? 0.90 : 1.0;
+
+                let targetWheelX = grabAnchor.wheelX + (handX - grabAnchor.handX) * movementRatio;
+                let targetWheelY = grabAnchor.wheelY + (handY - grabAnchor.handY) * movementRatio;
+
+                // 추가 안전장치: 손이 이동했는데 목표 위치가 그대로라면 기본 1.0으로 복구
+                if ((handX !== grabAnchor.handX || handY !== grabAnchor.handY) && targetWheelX === wheel.x && targetWheelY === wheel.y) {
+                    movementRatio = 1.0;
+                    targetWheelX = grabAnchor.wheelX + (handX - grabAnchor.handX) * movementRatio;
+                    targetWheelY = grabAnchor.wheelY + (handY - grabAnchor.handY) * movementRatio;
+                }
+
+                // 움직임 고정 방지를 위해 속도 제한 없이 즉각 반영
+                wheel.x = targetWheelX;
+                wheel.y = targetWheelY;
+            } else {
+                grabAnchor = null;
+            }
+        }
+
+        function isWheelInTargetWithTolerance() {
+            const box = targetBox();
+            const x = wheel.x * sceneCanvas.width;
+            const y = wheel.y * sceneCanvas.height;
+            let tolP = config.diff === 'easy' ? 0.35 : 0.15;
+            const tolerance = box.w * tolP;
+            return Math.abs(x - box.x) <= (box.w / 2 + tolerance) && Math.abs(y - box.y) <= (box.h / 2 + tolerance);
+        }
+
+        function checkSuccess() {
+            if (!isExercising) return;
+            const now = performance.now();
+            if (!wheel.grabbed) {
+                stillSince = null;
+                outOfTargetSince = null;
+                holdProgress = 0;
+                lastWheel = null;
+                setGuideMessage('운전대를 잡아주세요', '양손 손가락 선이 운전대 좌우 손잡이에 닿으면 잡기 성공입니다.');
+                return;
+            }
+            if (!isWheelInTargetWithTolerance()) {
+                if (stillSince) {
+                    if (!outOfTargetSince) outOfTargetSince = now;
+                    if (now - outOfTargetSince > 500) {
+                        stillSince = null;
+                        outOfTargetSince = null;
+                        holdProgress = 0;
+                        setGuideMessage(targetText[target], '현재 목표 점선 네모 안으로 운전대를 옮겨주세요.');
+                    } else {
+                        // within tolerance time, do not reset yet
+                    }
+                } else {
+                    setGuideMessage(targetText[target], '현재 목표 점선 네모 안으로 운전대를 옮겨주세요.');
+                }
+                return;
+            }
+            
+            // in target
+            outOfTargetSince = null;
+            if (!stillSince) stillSince = now;
+            const holdLimit = parseInt(config.hold);
+            holdProgress = (now - stillSince) / (holdLimit * 1000);
+            setGuideMessage('좋습니다. 그대로 버텨주세요.', `진행도: ${currentTargetIndex + 1}/4 방향 | 조금 흔들려도 괜찮습니다.`);
+            if (holdProgress >= 1) handleSuccess();
+        }
+
+        function handleSuccess() {
+            score++;
+            if (config.mode === 'group') {
+                teamDirs[config.team][targets[currentTargetIndex]]++;
+                teamRunTotalScore++;
+                saveTeamProgress();
+            }
+
+            currentTargetIndex++;
+            if (currentTargetIndex >= targets.length) {
+                currentTargetIndex = 0;
+                updateTopBarScore();
+                feedback = { text: '4방향 순회 완료!', t: performance.now() };
+                setGuideMessage('성공! 1점 획득', '처음부터 다시 시작합니다.');
+            } else {
+                updateTopBarScore();
+                feedback = { text: '성공! 1점 획득', t: performance.now() };
+                setGuideMessage('성공! 1점 획득', '다음 목표 점선 네모로 이동하세요.');
+            }
+            target = targets[currentTargetIndex];
+            wheel = { x: 0.5, y: 0.52, grabbed: false };
+            grabAnchor = null;
+            stillSince = null;
+            outOfTargetSince = null;
+            holdProgress = 0;
+            lastWheel = null;
+        }
+
+        const hands = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.55, minTrackingConfidence: 0.5 });
+        hands.onResults(results => {
+            drawHands(results);
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                handLostFrames = 0;
+                if (!handRecognized) {
+                    handRecognized = true;
+                    document.getElementById('hand-status').innerText = '손 인식 완료';
+                    document.getElementById('hand-status').style.color = '#22c55e';
+                    if (!isExercising) prepareSelectedTeamStart();
+                }
+                updateGrabAndWheel();
+                checkSuccess();
+            } else {
+                handLostFrames++;
+                wheel.grabbed = false;
+                if (handLostFrames > 25 && handRecognized) {
+                    handRecognized = false;
+                    document.getElementById('hand-status').innerText = '양손을 화면에 보여주세요';
+                    document.getElementById('hand-status').style.color = '#ef4444';
+                }
+            }
+        });
+
+        function startCamera() {
+            const btnCam = document.getElementById('btn-camera');
+            btnCam.innerText = '카메라 로딩중...';
+            btnCam.style.opacity = '.7';
+            document.getElementById('hand-status').innerText = '카메라 권한을 허용해주세요...';
+            camera = new Camera(videoElement, {
+                onFrame: async () => { await hands.send({ image: videoElement }); },
+                width: 1280,
+                height: 720
+            });
+            camera.start().then(() => {
+                btnCam.innerText = '카메라 켜짐';
+                btnCam.disabled = true;
+                document.getElementById('hand-status').innerText = '양손을 화면에 보여주세요';
+                document.getElementById('hand-status').style.color = '#ef4444';
+            }).catch(err => {
+                document.getElementById('hand-status').innerText = '카메라 오류: ' + err.message;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-start').addEventListener('click', () => {
+                currentPlayer = 1;
+                teamRunTotalScore = 0;
+                resetExerciseRoundState();
+                document.getElementById('settings-panel').classList.add('hidden');
+                document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+                runCountdownThenStart();
+            });
+            prepareSelectedTeamStart();
+        });
+
+        function startGame() {
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('top-bar').classList.add('active');
+            document.getElementById('guide-overlay').style.display = 'block';
+            resetExerciseRoundState();
+            document.getElementById('ui-title').innerHTML = config.mode === 'group'
+                ? `${teamNames[config.team]} <span style="font-size:18px;">${currentPlayer}번 참가자</span>`
+                : '운전대 잡고 당기기';
+            if (!isGameLoopRunning) {
+                isGameLoopRunning = true;
+                gameLoop();
+            }
+            isExercising = true;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
+                if (timeLeft <= 0) endExercise();
+            }, 1000);
+        }
+
+        function endExercise() {
+            isExercising = false;
+            clearInterval(timerInterval);
+            document.getElementById('top-bar').classList.remove('active');
+            document.getElementById('guide-overlay').style.display = 'none';
+            document.getElementById('result-screen').classList.add('active');
+            document.getElementById('res-score').innerText = `성공 ${score}회`;
+            
+            if (config.mode === 'group') {
+                const totalTime = parseInt(config.time);
+                document.getElementById('res-time').innerText = `운동 시간: ${totalTime}초`;
+                // Note: teamRunTotalScore is already incremented in handleSuccess
+                document.getElementById('res-subtitle').innerText = '잘했어요!';
+                document.getElementById('res-title').innerText = `${teamNames[config.team]} ${currentPlayer}번 참가자 완료`;
+                
+                if (currentPlayer < parseInt(config.players)) {
+                    document.getElementById('res-next-notice').style.display = 'block';
+                    document.getElementById('res-btn').innerText = '다음 참가자 시작하기';
+                } else {
+                    teamScores[config.team] += teamRunTotalScore;
+                    teamCompleted[config.team] = true;
+                    saveTeamProgress();
+                    document.getElementById('res-next-notice').style.display = 'none';
+                    document.getElementById('res-btn').innerText = allTeamsCompleted() ? '세 팀 결과 보기' : '다른 팀 선택하기';
+                }
+            } else {
+                document.getElementById('res-time').innerText = `운동 시간: ${config.time}초`;
+                document.getElementById('res-subtitle').innerText = '잘했어요!';
+                document.getElementById('res-title').innerText = '수고하셨습니다';
+                document.getElementById('res-next-notice').style.display = 'none';
+                document.getElementById('res-btn').innerText = '다시 시작하기';
+                fireConfetti('confetti-single');
+            }
+        }
+
+        function nextAction() {
+            document.getElementById('result-screen').classList.remove('active');
+            document.getElementById('scoreboard-screen').classList.remove('active');
+            if (config.mode === 'group') {
+                if (currentPlayer >= parseInt(config.players)) {
+                    if (allTeamsCompleted()) showScoreboard();
+                    else showSettingsForNextTeam();
+                    return;
+                }
+                currentPlayer++;
+            }
+            resetExerciseRoundState();
+            runCountdownThenStart();
+        }
+
+        function showScoreboard() {
+            document.getElementById('settings-panel').classList.add('hidden');
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('scoreboard-screen').classList.add('active');
+            const completedCount = orderedTeams.filter(team => teamCompleted[team]).length;
+            let maxScore = -1;
+            const html = [];
+            orderedTeams.forEach(team => {
+                const dirs = teamDirs[team] || {right:0, left:0, up:0, down:0};
+                const scoreText = teamCompleted[team] 
+                    ? `<span style="color:#22c55e">${teamScores[team]}</span>회 
+                       <span style="font-size:24px; color:#64748b; margin-left:15px;">(➡️${dirs.right} ⬅️${dirs.left} ⬆️${dirs.up} ⬇️${dirs.down})</span>`
+                    : `<span style="color:#94a3b8">미완료</span>`;
+                html.push(`<div style="margin-bottom:30px;">${teamNames[team]} : ${scoreText}</div>`);
+                if (teamCompleted[team] && teamScores[team] > maxScore) maxScore = teamScores[team];
+            });
+            const winners = orderedTeams.filter(team => teamCompleted[team] && teamScores[team] === maxScore).map(team => plainNames[team]);
+            document.getElementById('score-list').innerHTML = html.join('');
+            if (completedCount === 3 && winners.length > 1) {
+                document.getElementById('score-winner').innerText = `1등: ${winners.join(' / ')} 공동 1등 (${maxScore}회)`;
+                fireConfetti('confetti');
+            } else if (completedCount === 3 && winners.length === 1) {
+                document.getElementById('score-winner').innerText = `1등: ${winners[0]} (${maxScore}회)`;
+                fireConfetti('confetti');
+            } else if (completedCount > 0) {
+                document.getElementById('score-winner').innerText = `진행 중: ${completedCount}/3팀 완료`;
+            } else {
+                document.getElementById('score-winner').innerText = '아직 기록이 없습니다.';
+            }
+        }
+
+        function closeScoreboard() {
+            document.getElementById('scoreboard-screen').classList.remove('active');
+            document.getElementById('settings-panel').classList.remove('hidden');
+            prepareSelectedTeamStart();
+        }
+
+        function fireConfetti(canvasId) {
+            const confCanvas = document.getElementById(canvasId);
+            const ctx = confCanvas.getContext('2d');
+            confCanvas.width = window.innerWidth;
+            confCanvas.height = window.innerHeight;
+            let particles = [];
+            const colors = ['#22c55e', '#39ff14', '#38bdf8', '#f59e0b', '#facc15'];
+            for (let i = 0; i < 150; i++) particles.push({ x: Math.random() * confCanvas.width, y: Math.random() * confCanvas.height - confCanvas.height, size: Math.random() * 15 + 5, color: colors[Math.floor(Math.random() * colors.length)], speed: Math.random() * 5 + 2, angle: Math.random() * 360 });
+            function render() {
+                if (isExercising && canvasId === 'confetti-single') return;
+                ctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+                particles.forEach(p => {
+                    p.y += p.speed;
+                    p.x += Math.sin(p.angle) * 2;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    if (p.y > confCanvas.height) p.y = -20;
+                });
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+BeeMotion 단체모드 엔진 및 시작 직후 인식 오류 수정
+
+수정 범위:
+1. 단체모드 팀별 진행 엔진
+2. 시작 직후 1~2초 성공 판정 누락 문제
+
+그 외 손 인식, 자석, 바구니 디자인, 물체 이미지, 홈화면은 건드리지 마세요.
+
+
+========================
+1. 단체모드 팀 진행 방식
+========================
+
+현재 문제:
+한 팀만 실행되고 다른 팀으로 연결되지 않습니다.
+또는 팀을 바꾸면 점수가 초기화됩니다.
+
+원하는 방식:
+
+단체모드는 팀 선택형 릴레이입니다.
+
+빨강팀 선택
+↓
+빨강팀 참가자 전원 진행
+↓
+빨강팀 점수 저장
+↓
+설정 화면으로 복귀
+↓
+파랑팀 선택
+↓
+파랑팀 참가자 전원 진행
+↓
+파랑팀 점수 저장
+↓
+설정 화면으로 복귀
+↓
+초록팀 선택
+↓
+초록팀 참가자 전원 진행
+↓
+초록팀 점수 저장
+↓
+결과보기
+↓
+세 팀 점수 비교
+↓
+1등 표시
+
+
+중요:
+- 같은 팀 안에서는 다음 참가자 버튼으로 계속 진행
+- 한 팀이 끝나면 자동으로 다른 팀 시작 금지
+- 반드시 설정 화면으로 돌아가기
+- 기존 팀 점수는 유지
+- 팀 변경 시 점수 초기화 금지
+
+
+========================
+2. 팀 점수 저장 방식
+========================
+
+전역 또는 sessionStorage 사용:
+
+teamScores = {
+  red: 0,
+  blue: 0,
+  green: 0
+}
+
+teamCompleted = {
+  red: false,
+  blue: false,
+  green: false
+}
+
+각 팀 종료 시:
+
+teamScores[currentTeam] += teamTotalScore
+teamCompleted[currentTeam] = true
+
+sessionStorage에 저장:
+
+sessionStorage.setItem("beeMotionTeamScores", JSON.stringify(teamScores));
+sessionStorage.setItem("beeMotionTeamCompleted", JSON.stringify(teamCompleted));
+
+
+결과보기 시:
+
+항상 세 팀 표시:
+
+🔴 빨강팀 00개
+🔵 파랑팀 00개
+🟢 초록팀 00개
+
+완료 안 된 팀은:
+“미완료” 표시
+
+
+========================
+3. 세 번째 팀 시작 오류 수정
+========================
+
+현재:
+빨강/파랑까지는 되지만 초록팀 시작하기가 안 되는 문제가 있습니다.
+
+수정:
+팀 선택 버튼은 항상 클릭 가능해야 합니다.
+currentTeam이 red/blue/green 어떤 값이어도 startGame()이 실행되어야 합니다.
+
+확인:
+- green 선택 시 config.team = "green"
+- currentPlayer = 1로 초기화
+- score = 0
+- objects = []
+- basketItems = []
+- timer 초기화
+- startGame() 정상 실행
+
+
+========================
+4. 시작 직후 1~2초 성공 판정 누락 문제
+========================
+
+현재 문제:
+10초 운동에서 시작하자마자 1~2초 동안 물건을 잡고 바구니에 가져가도 성공 처리가 안 됩니다.
+두 번째 물건부터 성공되는 경우가 있습니다.
+
+이 문제는 어르신에게 “나만 안 된다”는 느낌을 줄 수 있으므로 반드시 수정합니다.
+
+원인 가능성:
+- startGame 직후 basket 위치 계산이 아직 안 됨
+- basket-img가 display:block 된 직후 getBoundingClientRect() 값이 불안정함
+- 손 인식 좌표는 나오지만 isExercising 활성화 전 상태가 늦게 반영됨
+- objects 생성 직후 success 판정 함수가 첫 프레임에서 작동하지 않음
+
+
+수정:
+
+startGame() 실행 시:
+
+1. overlay 전부 제거
+2. basket-img 표시
+3. basket 위치 계산
+4. 손 인식 상태 유지
+5. isExercising = true
+6. 300ms 후 첫 물체 생성
+7. 첫 물체부터 성공 판정 가능하게 처리
+
+
+코드 개념:
+
+document.querySelectorAll('.overlay-screen').forEach(s => s.classList.remove('active'));
+
+basketImgElement.style.display = 'block';
+
+requestAnimationFrame(() => {
+  updateBasketRect();
+  isExercising = true;
+  spawnObject();
+});
+
+
+또는:
+
+setTimeout(() => {
+  updateBasketRect();
+  spawnObject();
+}, 300);
+
+
+========================
+5. 성공 판정 즉시 활성화
+========================
+
+첫 번째 물건도 아래 조건이 되면 바로 성공해야 합니다.
+
+손으로 잡음
+↓
+자석 바구니 근처 이동
+↓
+basketMagnetZone 진입
+↓
+성공 +1
+↓
+바구니 안에 쌓임
+
+
+시작 후 첫 번째 물건이라고 해서 무시되면 안 됩니다.
+
+
+========================
+6. 다시 시작 / 다음 팀 시작 초기화
+========================
+
+새 참가자 또는 새 팀 시작 시:
+
+score = 0
+objects = []
+basketItems = []
+timeLeft = selectedTime
+isExercising = false 후 true로 재설정
+handCursors 유지
+camera 유지
+hands 모델 유지
+
+카메라를 다시 켜지 않음
+
+
+========================
+7. 완료 기준
+========================
+
+1. 빨강팀 완료 후 파랑팀 선택 가능
+2. 파랑팀 완료 후 초록팀 선택 가능
+3. 초록팀도 시작 버튼 정상 작동
+4. 세 팀 점수 모두 저장
+5. 결과보기에서 세 팀 모두 표시
+6. 첫 번째 물건도 시작 직후 성공 처리 가능
+7. 10초 운동에서도 첫 1초 성공이 누락되지 않음
