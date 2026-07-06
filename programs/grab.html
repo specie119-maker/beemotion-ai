@@ -705,33 +705,45 @@
             document.getElementById('hand-status').innerText = "카메라 권한을 허용해주세요...";
             document.getElementById('hand-status').style.color = "#666";
 
-            navigator.mediaDevices.getUserMedia({ video: true })
+            navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } })
                 .then((stream) => {
-                    camera = new Camera(videoElement, {
-                        onFrame: async () => {
-                            await hands.send({image: videoElement});
-                        },
-                        width: 1280,
-                        height: 720
-                    });
-                    camera.start().then(() => {
-                        document.getElementById('dbg-cam').innerText = "ON";
-                        document.getElementById('dbg-cam').style.color = "#22C55E";
-                        
-                        btnCam.innerText = "카메라 켜짐";
-                        btnCam.disabled = true;
-                        
-                        document.getElementById('hand-status').innerText = "손을 화면에 보여주세요";
-                        document.getElementById('hand-status').style.color = "#ef4444";
-                    }).catch((err) => {
-                        document.getElementById('hand-status').innerText = "카메라 시작 오류: " + err.message;
-                    });
+                    videoElement.srcObject = stream;
+                    
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(() => {
+                            document.getElementById('dbg-cam').innerText = "ON";
+                            document.getElementById('dbg-cam').style.color = "#22C55E";
+                            
+                            btnCam.innerText = "카메라 켜짐";
+                            btnCam.disabled = true;
+                            
+                            document.getElementById('hand-status').innerText = "손을 화면에 보여주세요";
+                            document.getElementById('hand-status').style.color = "#ef4444";
+                            
+                            let lastVideoTime = -1;
+                            async function processVideo() {
+                                if (videoElement.readyState >= 2 && videoElement.currentTime !== lastVideoTime) {
+                                    lastVideoTime = videoElement.currentTime;
+                                    try {
+                                        await hands.send({image: videoElement});
+                                    } catch (e) {
+                                        console.error("Hand tracking error:", e);
+                                    }
+                                }
+                                requestAnimationFrame(processVideo);
+                            }
+                            requestAnimationFrame(processVideo);
+                        }).catch((err) => {
+                            document.getElementById('hand-status').innerText = "비디오 재생 오류: " + err.message;
+                        });
+                    };
                 })
                 .catch((err) => {
                     document.getElementById('hand-status').innerText = "권한 거부 또는 카메라 없음";
                     btnCam.innerText = "카메라 켜기 (재시도)";
                     btnCam.style.opacity = "1";
                     btnCam.disabled = false;
+                    console.error("Camera error:", err);
                 });
         }
         
