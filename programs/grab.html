@@ -431,73 +431,78 @@
         }
 
         function gameLoop() {
-            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            try {
+                gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
-            gameCtx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-            gameCtx.shadowBlur = 15;
-            gameCtx.shadowOffsetX = 0;
-            gameCtx.shadowOffsetY = 8;
+                gameCtx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+                gameCtx.shadowBlur = 15;
+                gameCtx.shadowOffsetX = 0;
+                gameCtx.shadowOffsetY = 8;
 
-            for (let item of basketItems) {
-                gameCtx.drawImage(item.img, item.x, item.y, item.size, item.size);
-            }
+                for (let item of basketItems) {
+                    gameCtx.drawImage(item.img, item.x, item.y, item.size, item.size);
+                }
 
-            const speed = config.speed === 'fast' ? 2.0 : 1.4;
-            for(let i = objects.length - 1; i >= 0; i--) {
-                let obj = objects[i];
-                if(obj.grabbed) {
-                    obj.x = handCursors[obj.grabbedBy].x - obj.size/2;
-                    obj.y = handCursors[obj.grabbedBy].y - obj.size/2;
-                    
-                    // Auto-success if staying in basketInnerZone for 0.5s
-                    const cx = obj.x + obj.size/2;
-                    const cy = obj.y + obj.size/2;
-                    const basketEl = document.getElementById('basket-img');
-                    const bRect = basketEl.getBoundingClientRect();
-                    
-                    const innerLeft = bRect.left + bRect.width * 0.28;
-                    const innerTop = bRect.top + bRect.height * 0.38;
-                    const innerRight = innerLeft + bRect.width * 0.44;
-                    const innerBottom = innerTop + bRect.height * 0.32;
-                    
-                    if(cx > innerLeft && cx < innerRight && cy > innerTop && cy < innerBottom) {
-                        if (!obj.innerZoneTime) obj.innerZoneTime = performance.now();
-                        if (performance.now() - obj.innerZoneTime > 500) {
-                            handCursors[obj.grabbedBy].isGrabbing = false;
-                            handCursors[obj.grabbedBy].grabbedObj = null;
-                            obj.grabbed = false;
-                            handleSuccess(obj);
-                            objects.splice(i, 1);
-                            continue;
-                        }
-                    } else {
-                        obj.innerZoneTime = 0;
-                    }
-                } else {
-                    obj.y += speed;
-                    
-                    if (obj.wasGrabbed) {
+                const speed = config.speed === 'fast' ? 2.0 : 1.4;
+                for(let i = objects.length - 1; i >= 0; i--) {
+                    let obj = objects[i];
+                    if(obj.grabbed) {
+                        obj.x = handCursors[obj.grabbedBy].x - obj.size/2;
+                        obj.y = handCursors[obj.grabbedBy].y - obj.size/2;
+                        
                         const cx = obj.x + obj.size/2;
                         const cy = obj.y + obj.size/2;
                         const basketEl = document.getElementById('basket-img');
                         const bRect = basketEl.getBoundingClientRect();
                         
-                        const leeway = 80; 
-                        if(cx > bRect.left - leeway && cx < bRect.right + leeway && cy > bRect.top - leeway && cy < bRect.bottom + leeway) {
-                            handleSuccess(obj);
-                            objects.splice(i, 1);
-                            continue;
+                        const innerLeft = bRect.left + bRect.width * 0.28;
+                        const innerTop = bRect.top + bRect.height * 0.38;
+                        const innerRight = innerLeft + bRect.width * 0.44;
+                        const innerBottom = innerTop + bRect.height * 0.32;
+                        
+                        if(cx > innerLeft && cx < innerRight && cy > innerTop && cy < innerBottom) {
+                            if (!obj.innerZoneTime) obj.innerZoneTime = performance.now();
+                            if (performance.now() - obj.innerZoneTime > 500) {
+                                handCursors[obj.grabbedBy].isGrabbing = false;
+                                handCursors[obj.grabbedBy].grabbedObj = null;
+                                obj.grabbed = false;
+                                handleSuccess(obj);
+                                objects.splice(i, 1);
+                                continue;
+                            }
+                        } else {
+                            obj.innerZoneTime = 0;
+                        }
+                    } else {
+                        obj.y += speed;
+                        
+                        if (obj.wasGrabbed) {
+                            const cx = obj.x + obj.size/2;
+                            const cy = obj.y + obj.size/2;
+                            const basketEl = document.getElementById('basket-img');
+                            const bRect = basketEl.getBoundingClientRect();
+                            
+                            const leeway = 80; 
+                            if(cx > bRect.left - leeway && cx < bRect.right + leeway && cy > bRect.top - leeway && cy < bRect.bottom + leeway) {
+                                handleSuccess(obj);
+                                objects.splice(i, 1);
+                                continue;
+                            }
                         }
                     }
-                }
-                gameCtx.drawImage(obj.img, obj.x, obj.y, obj.size, obj.size);
+                    if (obj.img && obj.img.complete && obj.img.naturalWidth !== 0) {
+                        gameCtx.drawImage(obj.img, obj.x, obj.y, obj.size, obj.size);
+                    }
 
-                if(obj.y > gameCanvas.height && obj.state !== 'dropping') {
-                    objects.splice(i, 1);
+                    if(obj.y > gameCanvas.height && obj.state !== 'dropping') {
+                        objects.splice(i, 1);
+                    }
                 }
+                
+                gameCtx.shadowColor = 'transparent';
+            } catch (e) {
+                console.error("gameLoop error:", e);
             }
-            
-            gameCtx.shadowColor = 'transparent';
             
             requestAnimationFrame(gameLoop);
         }
@@ -607,8 +612,8 @@
 
         hands.onResults((results) => {
             canvasCtx.save();
-            canvasCtx.fillStyle = '#000000';
-            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
             // Render hands ALWAYS (even before startExercise) to give visual feedback
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
