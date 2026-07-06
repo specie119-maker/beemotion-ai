@@ -71,7 +71,7 @@
         /* Video and Canvas */
         #video_input { display: none; }
         #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; z-index: 10; }
-        #game_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
+        #game_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; }
 
         /* Result Screens */
         .overlay-screen {
@@ -194,7 +194,7 @@
         <video id="video_input" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
         <canvas id="game_canvas"></canvas>
-        <img id="basket-img" src="../asserts/손으로잡고넣기/basket.png?v=20260704-cutout" style="position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; width: 390px; display: none; pointer-events: none;">
+        <img id="basket-img" src="../asserts/%E1%84%89%E1%85%A9%E1%86%AB%E1%84%8B%E1%85%B3%E1%84%85%E1%85%A9%E1%84%8C%E1%85%A1%E1%86%B8%E1%84%80%E1%85%A9%E1%84%82%E1%85%A5%E1%87%82%E1%84%80%E1%85%B5/basket.png?v=20260704-cutout" style="position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; width: 390px; display: none; pointer-events: none;">
 
         <!-- Countdown Screen -->
         <div class="overlay-screen" id="countdown-screen" style="background: rgba(0,0,0,0.85);">
@@ -323,9 +323,9 @@
         let timeLeft = 0;
         let timerInterval = null;
         
-        let basketImg = new Image(); basketImg.src = '../asserts/손으로잡고넣기/basket.png?v=20260704-cutout';
+        let basketImg = new Image(); basketImg.src = '../asserts/%E1%84%89%E1%85%A9%E1%86%AB%E1%84%8B%E1%85%B3%E1%84%85%E1%85%A9%E1%84%8C%E1%85%A1%E1%86%B8%E1%84%80%E1%85%A9%E1%84%82%E1%85%A5%E1%87%82%E1%84%80%E1%85%B5/basket.png?v=20260704-cutout';
         let objectImages = ['obj_ball.png', 'obj_star.png', 'obj_puppy.png', 'obj_panda.png', 'obj_krw.png', 'obj_usd.png'].map(src => {
-            let img = new Image(); img.src = '../asserts/손으로잡고넣기/' + src; return img;
+            let img = new Image(); img.src = '../asserts/%E1%84%89%E1%85%A9%E1%86%AB%E1%84%8B%E1%85%B3%E1%84%85%E1%85%A9%E1%84%8C%E1%85%A1%E1%86%B8%E1%84%80%E1%85%A9%E1%84%82%E1%85%A5%E1%87%82%E1%84%80%E1%85%B5/' + src; return img;
         });
 
         // --- Game Logic ---
