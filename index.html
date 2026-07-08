@@ -238,11 +238,26 @@
             opacity: 1;
         }
 
+        .hero-video {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            background-color: black;
+        }
+        .hero-video.active {
+            opacity: 1;
+            z-index: 3;
+        }
+
         .hero-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.45);
             z-index: 2;
+            transition: opacity 1s ease, visibility 1s ease;
         }
 
         .hero-content {
@@ -254,6 +269,10 @@
             z-index: 3;
             width: 90%;
             max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: opacity 1s ease, visibility 1s ease;
         }
 
         .hero-title {
@@ -835,12 +854,12 @@
     </nav>
 
     <header id="hero">
-        <div class="hero-slider-bg" style="position: relative; background: url('./%E1%84%92%E1%85%A9%E1%86%B7%E1%84%92%E1%85%AA%E1%84%86%E1%85%A7%E1%86%AB/%E1%84%89%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A54%E1%84%86%E1%85%A7%E1%86%BC%E1%84%89%E1%85%A5%E1%84%8B%E1%85%B5%E1%86%BB%E1%84%82%E1%85%B3%E1%86%AB%E1%84%8C%E1%85%A1%E1%86%BC%E1%84%86%E1%85%A7%E1%86%AB.png') center/cover no-repeat;">
+        <div id="heroSliderBg" class="hero-slider-bg" style="position: relative; background-color: black;">
             <div id="homeHeroFallback" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); color: white; z-index: 1; font-size: 1.5rem; flex-direction: column;">
                 <span>영상을 불러오는 중 문제가 발생했습니다.</span>
                 <span style="font-size: 1rem; margin-top: 10px; color: #ccc;">대체 이미지를 표시합니다.</span>
             </div>
-            <video id="homeHeroVideo" poster="./%E1%84%92%E1%85%A9%E1%86%B7%E1%84%92%E1%85%AA%E1%84%86%E1%85%A7%E1%86%AB/%E1%84%89%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A54%E1%84%86%E1%85%A7%E1%86%BC%E1%84%89%E1%85%A5%E1%84%8B%E1%85%B5%E1%86%BB%E1%84%82%E1%85%B3%E1%86%AB%E1%84%8C%E1%85%A1%E1%86%BC%E1%84%86%E1%85%A7%E1%86%AB.png" autoplay muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2;"></video>
+            <!-- JS will append crossfading videos here -->
         </div>
         <div class="hero-overlay"></div>
         <div class="hero-content" id="heroTextOverlay">
@@ -879,48 +898,45 @@
             <p class="section-subtitle" data-i18n="prog_sub_title">개인운동과 단체활동을 선택해 시작하세요.</p>
         </div>
         <div class="programs-grid">
-            <div class="program-card cat-upper">
-                <h3 data-i18n="prog_1_title">🧺 손으로 잡아넣기 운동<br>개인모드</h3>
-                <p data-i18n="prog_1_desc">손으로 공이나 물건을 잡아 바구니에 넣으며 잡기 능력과 협응력을 훈련합니다.</p>
-                <a href="programs/grab.html?mode=individual&v=6" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
-            </div>
-            <div class="program-card cat-upper">
-                <h3 data-i18n="prog_2_title">🧺 손으로 잡아넣기 운동<br>단체모드</h3>
-                <p data-i18n="prog_2_desc">팀원과 함께 공을 옮겨보세요.<br>제한시간 동안 더 많이 성공한 팀이 승리합니다.</p>
-                <a href="programs/grab.html?mode=group&v=6" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
-            </div>
             <div class="program-card cat-fruit">
-                <h3 data-i18n="prog_fruit_1_title">🍎 열매따기 운동<br>개인모드</h3>
+                <h3 data-i18n="prog_fruit_1_title">🍎 열매따기<br>개인모드</h3>
                 <p data-i18n="prog_fruit_1_desc">손을 위로 올려 열매를 잡고 아래로 따며 어깨, 손가락, 악력을 함께 훈련합니다.</p>
                 <a href="programs/fruit.html?mode=individual&v=6" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
             </div>
             <div class="program-card cat-fruit">
-                <h3 data-i18n="prog_fruit_2_title">🍎 열매따기 운동<br>단체모드</h3>
+                <h3 data-i18n="prog_fruit_2_title">🍎 열매따기<br>단체모드</h3>
                 <p data-i18n="prog_fruit_2_desc">친구와 함께 열매 수확에 도전해보세요.<br>팀별 점수를 모아 즐겁게 경쟁합니다.</p>
                 <a href="programs/fruit.html?mode=group&v=6" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
             </div>
-            <div class="program-card cat-walk">
-                <h3 data-i18n="prog_walk_1_title">🐶 산책하기<br>개인모드</h3>
-                <p data-i18n="prog_walk_1_desc">안전손잡이를 잡고 제자리 걷기를 하며 동물과 함께 즐겁게 산책합니다.</p>
-                <a href="programs/walk.html?mode=individual&v=6" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
-            </div>
-
-
             <div class="program-card cat-bal">
-                <h3 data-i18n="prog_7_title">🚗 운전대 잡고 옮기기<br>개인모드</h3>
+                <h3 data-i18n="prog_7_title">🚗 운전대스트레칭<br>개인모드</h3>
                 <p data-i18n="prog_7_desc">운전대를 양손으로 잡고 목표 방향으로 이동한 뒤 멈추며 전신 이동과 균형을 훈련합니다.</p>
                 <a href="programs/steering-wheel.html?mode=individual&v=6" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
             </div>
             <div class="program-card cat-bal">
-                <h3 data-i18n="prog_8_title">🚗 운전대 잡고 옮기기<br>단체모드</h3>
-                <p data-i18n="prog_8_desc">순서대로 운전대를 조작해 목표에 도전하세요.<br>팀원이 함께 완주하는 협동 운동입니다.</p>
+                <h3 data-i18n="prog_8_title">🚗 운전대스트레칭<br>단체모드</h3>
+                <p data-i18n="prog_8_desc">순서대로 운전대를 조작해 목표에 도전하세요.<br>팀원이 함께 완주하는 협동 프로그램입니다.</p>
                 <a href="programs/steering-wheel.html?mode=group&v=6" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
             </div>
-
+            <div class="program-card cat-walk">
+                <h3 data-i18n="prog_walk_1_title">🐶 산책하기</h3>
+                <p data-i18n="prog_walk_1_desc">안전손잡이를 잡고 제자리 걷기를 하며 동물과 함께 즐겁게 산책합니다.</p>
+                <a href="programs/walk.html?mode=individual&v=6" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
+            </div>
             <div class="program-card cat-market">
                 <h3 data-i18n="prog_3_title">🛒 재래시장 쇼핑하기</h3>
                 <p data-i18n="prog_3_desc">제자리 걷기를 통해 장바구니를 끌며 정겨운 전통시장 골목을 구경하는 재미있는 하지훈련 프로그램입니다.</p>
                 <a href="programs/market.html?v=6" class="btn-primary" data-i18n="btn_individual">시작하기</a>
+            </div>
+            <div class="program-card cat-upper">
+                <h3 data-i18n="prog_1_title">🧺 손으로 잡아넣기<br>개인모드</h3>
+                <p data-i18n="prog_1_desc">손으로 공이나 물건을 잡아 바구니에 넣으며 잡기 능력과 협응력을 훈련합니다.</p>
+                <a href="programs/grab.html?mode=individual&v=6" class="btn-primary" data-i18n="btn_individual">개인모드 시작</a>
+            </div>
+            <div class="program-card cat-upper">
+                <h3 data-i18n="prog_2_title">🧺 손으로 잡아넣기<br>단체모드</h3>
+                <p data-i18n="prog_2_desc">팀원과 함께 공을 옮겨보세요.<br>제한시간 동안 더 많이 성공한 팀이 승리합니다.</p>
+                <a href="programs/grab.html?mode=group&v=6" class="btn-primary" data-i18n="btn_group">단체모드 시작</a>
             </div>
         </div>
         
@@ -1108,38 +1124,6 @@
 
     <!-- JavaScript -->
     <script>
-        // Hero Background Slider Logic
-        const bgs = document.querySelectorAll('.slide-bg');
-        const heroContent = document.querySelector('.hero-content');
-        const heroOverlay = document.querySelector('.hero-overlay');
-        
-        heroContent.style.transition = 'opacity 1s ease, visibility 1s ease';
-        heroOverlay.style.transition = 'opacity 1s ease, visibility 1s ease';
-
-        let currentBg = 0;
-        setInterval(() => {
-            bgs[currentBg].classList.remove('active');
-            currentBg = (currentBg + 1) % bgs.length;
-            bgs[currentBg].classList.add('active');
-            
-            if (currentBg === 3) {
-                heroContent.style.opacity = '0';
-                heroContent.style.visibility = 'hidden';
-                heroOverlay.style.opacity = '0';
-                heroOverlay.style.visibility = 'hidden';
-            } else {
-                heroContent.style.opacity = '1';
-                heroContent.style.visibility = 'visible';
-                heroOverlay.style.opacity = '1';
-                heroOverlay.style.visibility = 'visible';
-            }
-            
-            if(bgs[currentBg].tagName === 'VIDEO'){
-                bgs[currentBg].currentTime = 0;
-                bgs[currentBg].play().catch(e=>{});
-            }
-        }, 7000);
-
         // Language Dropdown Logic
         const langMenu = document.getElementById('lang-menu');
         function toggleLangMenu() {
@@ -1226,32 +1210,32 @@
                 brand_card3: "🛡 낙상 예방",
                 prog_main_title: "BeeMotion Movement Programs",
                 prog_sub_title: "개인운동과 단체활동을 선택해 시작하세요.",
-                prog_1_title: "🧺 손으로 잡아넣기 운동<br>개인모드",
+                prog_1_title: "🧺 손으로 잡아넣기<br>개인모드",
                 prog_1_desc: "손으로 공이나 물건을 잡아 바구니에 넣으며 잡기 능력과 협응력을 훈련합니다.",
-                prog_2_title: "🧺 손으로 잡아넣기 운동<br>단체모드",
+                prog_2_title: "🧺 손으로 잡아넣기<br>단체모드",
                 prog_2_desc: "팀원과 함께 공을 옮겨보세요.<br>제한시간 동안 더 많이 성공한 팀이 승리합니다.",
-                prog_fruit_1_title: "🍎 열매따기 운동<br>개인모드",
+                prog_fruit_1_title: "🍎 열매따기<br>개인모드",
                 prog_fruit_1_desc: "손을 위로 올려 열매를 잡고 아래로 따며 어깨, 손가락, 악력을 함께 훈련합니다.",
-                prog_fruit_2_title: "🍎 열매따기 운동<br>단체모드",
+                prog_fruit_2_title: "🍎 열매따기<br>단체모드",
                 prog_fruit_2_desc: "친구와 함께 열매 수확에 도전해보세요.<br>팀별 점수를 모아 즐겁게 경쟁합니다.",
                 prog_3_title: "🛒 재래시장 쇼핑하기",
                 prog_3_desc: "제자리 걷기를 통해 장바구니를 끌며 정겨운 전통시장 골목을 구경하는 재미있는 하지훈련 프로그램입니다.",
-                prog_leg_1_title: "🦵 튼튼다리 운동<br>개인모드",
+                prog_leg_1_title: "🦵 튼튼다리<br>개인모드",
                 prog_leg_1_desc: "의자에 앉아 다리를 앞으로 펴고 발을 살짝 들어 올리며 안전하게 하지근력을 훈련합니다.",
-                prog_leg_2_title: "🦵 튼튼다리 운동<br>단체모드",
+                prog_leg_2_title: "🦵 튼튼다리<br>단체모드",
                 prog_leg_2_desc: "팀별 릴레이로 다리를 앞으로 펴고 발을 살짝 들어올리기 성공 횟수를 합산합니다.",
-                prog_walk_1_title: "🐶 산책하기<br>개인모드",
+                prog_walk_1_title: "🐶 산책하기",
                 prog_walk_1_desc: "안전손잡이를 잡고 제자리 걷기를 하며 즐겁게 산책합니다.",
                 prog_walk_2_title: "🐶 산책하기<br>단체모드",
                 prog_walk_2_desc: "팀별 릴레이로 함께 걸으며 목표 거리에 도달하는 단체 산책 게임입니다.",
-                prog_5_title: "인지·반응 운동<br>개인모드",
+                prog_5_title: "인지·반응<br>개인모드",
                 prog_5_desc: "보고 판단하고 움직이는 과정을 통해 집중력과 반응 속도를 훈련합니다.",
-                prog_6_title: "인지·반응 운동<br>단체모드",
+                prog_6_title: "인지·반응<br>단체모드",
                 prog_6_desc: "팀별 활동을 통해 집중력, 순발력, 반응 속도를 함께 높이는 프로그램입니다.",
-                prog_7_title: "🚗 운전대 잡고 옮기기<br>개인모드",
+                prog_7_title: "🚗 운전대스트레칭<br>개인모드",
                 prog_7_desc: "운전대를 양손으로 잡고 목표 방향으로 이동한 뒤 멈추며 전신 이동과 균형을 훈련합니다.",
-                prog_8_title: "🚗 운전대 잡고 옮기기<br>단체모드",
-                prog_8_desc: "순서대로 운전대를 조작해 목표에 도전하세요.<br>팀원이 함께 완주하는 협동 운동입니다.",
+                prog_8_title: "🚗 운전대스트레칭<br>단체모드",
+                prog_8_desc: "순서대로 운전대를 조작해 목표에 도전하세요.<br>팀원이 함께 완주하는 협동 프로그램입니다.",
                 btn_individual: "개인모드 시작",
                 btn_group: "단체모드 시작",
                 youtube_btn: "BeeMotion 운동 영상 시청하기",
@@ -1565,54 +1549,90 @@
             const savedLang = localStorage.getItem('lang') || 'ko';
             applyLanguage(savedLang);
 
-            // Home Hero Video Slider
+            // Home Hero Video Crossfade Slider
             const homeVideos = [
-                "./%E1%84%92%E1%85%A9%E1%86%B7%E1%84%92%E1%85%AA%E1%84%86%E1%85%A7%E1%86%AB/homefull.mp4",
-                "./%E1%84%92%E1%85%A9%E1%86%B7%E1%84%92%E1%85%AA%E1%84%86%E1%85%A7%E1%86%AB/leg_exercise.mp4",
-                "./%E1%84%92%E1%85%A9%E1%86%B7%E1%84%92%E1%85%AA%E1%84%86%E1%85%A7%E1%86%AB/handle_exercise.mp4",
-                "./%E1%84%92%E1%85%A9%E1%86%B7%E1%84%92%E1%85%AA%E1%84%86%E1%85%A7%E1%86%AB/mother_exercise.mp4"
+                "home/homefull.mp4",
+                "home/leg_exercise.mp4",
+                "home/handle_exercise.mp4",
+                "home/mother_exercise.mp4"
             ];
 
             let currentHomeVideo = 0;
-            const homeHeroVideo = document.getElementById("homeHeroVideo");
-            const homeHeroFallback = document.getElementById("homeHeroFallback");
-            const heroTextOverlay = document.getElementById("heroTextOverlay");
+            const sliderBg = document.getElementById("heroSliderBg");
+            const videoElements = [];
 
-            function playHomeVideo() {
-                if(!homeHeroVideo) return;
-                
-                // Hide fallback initially
-                if (homeHeroFallback) homeHeroFallback.style.display = "none";
-                homeHeroVideo.style.display = "block";
-
-                if(homeVideos[currentHomeVideo].includes("mother_exercise")) {
-                    if(heroTextOverlay) heroTextOverlay.style.display = "flex";
-                    const demoBtn = document.getElementById('demoBtn');
-                    if(demoBtn) demoBtn.style.display = 'none';
-                } else {
-                    if(heroTextOverlay) heroTextOverlay.style.display = "flex";
-                    const demoBtn = document.getElementById('demoBtn');
-                    if(demoBtn) demoBtn.style.display = 'inline-flex';
-                }
-
-                homeHeroVideo.src = homeVideos[currentHomeVideo];
-                homeHeroVideo.load();
-                homeHeroVideo.play().catch(()=>{
-                    // Autoplay might be blocked or file missing
+            if (sliderBg) {
+                // Pre-create video elements for crossfading
+                homeVideos.forEach((src, idx) => {
+                    const v = document.createElement('video');
+                    v.className = 'hero-video' + (idx === 0 ? ' active' : '');
+                    v.src = src;
+                    
+                    // 브라우저 정책 및 사용자 요청에 맞춘 필수 속성
+                    v.autoplay = true;
+                    v.muted = true;
+                    v.playsInline = true;
+                    v.setAttribute('autoplay', '');
+                    v.setAttribute('muted', '');
+                    v.setAttribute('playsinline', '');
+                    // 참고: 개별 video에 loop를 적용하면 순차 재생(ended 이벤트)이 불가능하므로, 전체 배열을 loop 하는 방식으로 유지합니다.
+                    
+                    v.preload = "auto";
+                    sliderBg.appendChild(v);
+                    videoElements.push(v);
+                    
+                    v.addEventListener('ended', onVideoEnded);
+                    v.addEventListener('error', () => {
+                        console.error("Video load error:", src);
+                        v.style.display = 'none'; // 비디오 숨김
+                        const fallback = document.getElementById('homeHeroFallback');
+                        if (fallback) fallback.style.display = 'flex';
+                        // 에러 시 다음 영상 시도
+                        setTimeout(onVideoEnded, 1000);
+                    });
                 });
-            }
 
-            if(homeHeroVideo) {
-                homeHeroVideo.addEventListener("error", () => {
-                    homeHeroVideo.style.display = "none";
-                    if (homeHeroFallback) homeHeroFallback.style.display = "flex";
-                });
-                
-                homeHeroVideo.addEventListener("ended", () => {
+                function onVideoEnded() {
+                    const activeV = videoElements[currentHomeVideo];
                     currentHomeVideo = (currentHomeVideo + 1) % homeVideos.length;
-                    playHomeVideo();
-                });
-                playHomeVideo();
+                    const nextV = videoElements[currentHomeVideo];
+                    
+                    nextV.currentTime = 0;
+                    nextV.play().then(() => {
+                        nextV.classList.add('active');
+                        activeV.classList.remove('active');
+
+                        // Toggle text overlay visibility
+                        const heroContent = document.getElementById('heroTextOverlay');
+                        const heroOverlay = document.querySelector('.hero-overlay');
+                        if (currentHomeVideo === 3) {
+                            if (heroContent) {
+                                heroContent.style.opacity = '0';
+                                heroContent.style.visibility = 'hidden';
+                            }
+                            if (heroOverlay) {
+                                heroOverlay.style.opacity = '0';
+                                heroOverlay.style.visibility = 'hidden';
+                            }
+                        } else {
+                            if (heroContent) {
+                                heroContent.style.opacity = '1';
+                                heroContent.style.visibility = 'visible';
+                            }
+                            if (heroOverlay) {
+                                heroOverlay.style.opacity = '1';
+                                heroOverlay.style.visibility = 'visible';
+                            }
+                        }
+                    }).catch(e => {
+                        console.error("Video play failed:", e);
+                        nextV.style.display = 'none'; // 비디오 숨김
+                        const fallback = document.getElementById('homeHeroFallback');
+                        if (fallback) fallback.style.display = 'flex';
+                        // 재생 실패 시 다음 영상 시도
+                        setTimeout(onVideoEnded, 1000);
+                    });
+                }
             }
 
             // Initialize PayPal SDK Buttons
