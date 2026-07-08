@@ -1,0 +1,8 @@
+file 'homefull.mp4'
+outpoint 4
+file 'leg_exercise.mp4'
+outpoint 4
+file 'handle_exercise.mp4'
+outpoint 4
+file 'mother_exercise.mp4'
+outpoint 4
