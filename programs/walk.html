@@ -44,7 +44,7 @@
             border-radius: 16px; overflow: hidden; border: 4px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,.3); z-index: 20;
             background: #000;
         }
-        #video_input { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0; position: absolute; }
+        #video_input { display: block; position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; }
         #pose_canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; transform: scaleX(-1); z-index: 21; background: #000; }
         
         #pose-warning-overlay {
@@ -71,7 +71,7 @@
 </head>
 <body>
     <div id="settings-panel">
-        <div class="settings-title">🐕 산책하기</div>
+        <div class="settings-title">산책하기</div>
         <div class="program-desc">
             아름다운 산책길을 걸으며 즐겁게 움직여보세요.<br>걷기 활동과 정서 안정을 돕는 운동입니다.
         </div>
@@ -96,7 +96,7 @@
     </div>
 
     <div id="exercise-area">
-        <video id="walkVideo" src="../asserts/animal_walk/walk1.mov" muted playsinline preload="auto" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
+        <video id="walkVideo" src="../asserts/walk/walk1.mov" muted playsinline preload="auto" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
         
         <div id="top-bar">
             <div class="top-stat" id="ui-left-stat">남은시간 60초</div>
@@ -120,7 +120,7 @@
         </div>
         
         <div class="overlay-screen" id="result-screen">
-            <div class="result-title" id="res-title">산책 완료! 🐕</div>
+            <div class="result-title" id="res-title">산책 완료!</div>
             
             <div class="result-score" id="res-score" style="font-size:50px; color:#3A2A14; margin-bottom: 10px;">총 걸음: 0보</div>
             <div class="result-score" id="res-target" style="font-size:28px; color:#666; margin-bottom: 10px;">목표 걸음: 0보</div>
@@ -175,18 +175,19 @@
         let bodyCenterXSmoothed = null;
         let lastStepTime = 0;
         let lastMotionTime = 0;
+        let wasBouncing = false;
 
         const videoElement = document.getElementById('video_input');
         const poseCanvas = document.getElementById('pose_canvas');
         const poseCtx = poseCanvas.getContext('2d');
 
         const walkVideos = [
-            "../asserts/animal_walk/walk1.mov",
-            "../asserts/animal_walk/walk2.mov",
-            "../asserts/animal_walk/walk3.mov",
-            "../asserts/animal_walk/walk4.mov",
-            "../asserts/animal_walk/walk5.mov",
-            "../asserts/animal_walk/walk6.mov"
+            "../asserts/walk/walk1.mov",
+            "../asserts/walk/walk2.mov",
+            "../asserts/walk/walk3.mov",
+            "../asserts/walk/walk4.mov",
+            "../asserts/walk/walk5.mov",
+            "../asserts/walk/walk6.mov"
         ];
         let currentVideoIndex = 0;
 
@@ -309,8 +310,17 @@
             const thresholdY = 0.004;
             const thresholdX = 0.004;
 
-            if (diffY > thresholdY || diffX > thresholdX) {
+            const isBouncing = diffY > thresholdY || diffX > thresholdX;
+
+            if (isBouncing) {
                 lastMotionTime = performance.now();
+                if (!wasBouncing) {
+                    // 바운스 상태로 진입하는 그 순간에만 1걸음 카운트 (무한 카운트 방지)
+                    registerStep();
+                }
+                wasBouncing = true;
+            } else {
+                wasBouncing = false;
             }
 
             const now = performance.now();
@@ -319,7 +329,6 @@
                     walkingState = true;
                     document.getElementById('walkVideo').play().catch(e => {});
                 }
-                registerStep();
             } else {
                 if (walkingState) {
                     walkingState = false;

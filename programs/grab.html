@@ -69,7 +69,7 @@
         .top-title { font-size: 32px; font-weight: 900; color: #fff; text-align: center; }
 
         /* Video and Canvas */
-        #video_input { display: none; }
+        #video_input { display: block; position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; }
         #output_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; z-index: 40; pointer-events: none; }
         #game_canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; }
 
@@ -440,7 +440,11 @@
                 gameCtx.shadowOffsetY = 8;
 
                 for (let item of basketItems) {
-                    gameCtx.drawImage(item.img, item.x, item.y, item.size, item.size);
+                    try {
+                        if (item.img && item.img.complete && item.img.naturalWidth !== 0) {
+                            gameCtx.drawImage(item.img, item.x, item.y, item.size, item.size);
+                        }
+                    } catch(err) {}
                 }
 
                 const speed = config.speed === 'fast' ? 4.5 : 1.4;
@@ -490,9 +494,11 @@
                             }
                         }
                     }
-                    if (obj.img && obj.img.complete && obj.img.naturalWidth !== 0) {
-                        gameCtx.drawImage(obj.img, obj.x, obj.y, obj.size, obj.size);
-                    }
+                    try {
+                        if (obj.img && obj.img.complete && obj.img.naturalWidth !== 0) {
+                            gameCtx.drawImage(obj.img, obj.x, obj.y, obj.size, obj.size);
+                        }
+                    } catch(err) {}
 
                     if(obj.y > gameCanvas.height && obj.state !== 'dropping') {
                         objects.splice(i, 1);

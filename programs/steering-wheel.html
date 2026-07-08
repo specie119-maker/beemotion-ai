@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeeMotion - 운전대 잡고 옮기기</title>
+    <title>BeeMotion - 운전대 스트레칭</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -30,7 +30,7 @@
         #top-bar.active { display: flex; }
         .top-stat { min-width: 190px; padding: 10px 24px; border-radius: 18px; background: rgba(255,255,255,.95); color: #064e3b; font-size: 28px; font-weight: 900; text-align: center; }
         .top-title { color: #fff; font-size: 34px; font-weight: 900; text-align: center; text-shadow: 0 3px 12px rgba(0,0,0,.55); }
-        #video_input { display: none; }
+        #video_input { display: block; position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; }
         #hand_canvas, #scene_canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
         #hand_canvas { z-index: 20; }
         #scene_canvas { z-index: 30; }
@@ -57,7 +57,7 @@
 </head>
 <body>
     <div id="settings-panel">
-        <div class="settings-title">🚗 운전대 잡고 옮기기</div>
+        <div class="settings-title">🚗 운전대 스트레칭</div>
         <div class="program-desc">
             운전대를 움직여 목표 지점까지 이동해보세요.<br>팔 조절 능력과 방향 감각을 키우는 운동입니다.
         </div>
@@ -87,17 +87,11 @@
             </div>
         </div>
         <div class="settings-group">
-            <label>난이도</label>
-            <div class="radio-options" id="opt-diff">
-                <div class="radio-btn active" data-val="easy">1단계 기본</div>
-                <div class="radio-btn" data-val="normal">2단계 강화</div>
-            </div>
-        </div>
-        <div class="settings-group">
             <label>버티기 시간</label>
             <div class="radio-options" id="opt-hold">
                 <div class="radio-btn active" data-val="10">10초</div>
                 <div class="radio-btn" data-val="15">15초</div>
+                <div class="radio-btn" data-val="20">20초</div>
             </div>
         </div>
         <div class="settings-group">
@@ -122,7 +116,7 @@
     <div id="exercise-area">
         <div id="top-bar">
             <div class="top-stat" id="ui-time">남은시간 30초</div>
-            <div class="top-title" id="ui-title">운전대 잡고 옮기기</div>
+            <div class="top-title" id="ui-title">운전대 스트레칭</div>
             <div class="top-stat" id="ui-score" style="color:#22c55e;">성공 0회</div>
         </div>
         <div id="guide-overlay">
@@ -157,7 +151,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const initMode = urlParams.get('mode') || 'individual';
-        const config = { mode: initMode, team: 'red', players: 3, time: 60, diff: 'easy', hold: 10 };
+        const config = { mode: initMode, team: 'red', players: 3, time: 60, hold: 10 };
         const teamNames = { red: '🔴 빨강팀', blue: '🔵 파랑팀', green: '🟢 초록팀' };
         const plainNames = { red: '빨강팀', blue: '파랑팀', green: '초록팀' };
         const orderedTeams = ['red', 'blue', 'green'];
@@ -243,10 +237,42 @@
         }
         setupRadio('opt-team', 'team');
         setupRadio('opt-players', 'players');
-        setupRadio('opt-diff', 'diff');
+
         setupRadio('opt-time', 'time');
         setupRadio('opt-hold', 'hold');
         setupRadio('opt-mode', 'mode');
+
+        // 버티기 시간(20초) 선택 시 총 제한시간 강제 설정 로직
+        document.getElementById('opt-hold').addEventListener('click', (e) => {
+            if (e.target.classList.contains('radio-btn')) {
+                const holdVal = parseInt(config.hold);
+                const timeOpt = document.getElementById('opt-time');
+                const time60Btn = timeOpt.querySelector('[data-val="60"]');
+                const time90Btn = timeOpt.querySelector('[data-val="90"]');
+                
+                let infoMsg = document.getElementById('hold-info-msg');
+                if (!infoMsg) {
+                    infoMsg = document.createElement('div');
+                    infoMsg.id = 'hold-info-msg';
+                    infoMsg.style.color = '#ef4444'; // 빨간색 텍스트
+                    infoMsg.style.fontSize = '14px';
+                    infoMsg.style.marginTop = '8px';
+                    infoMsg.style.fontWeight = 'bold';
+                    document.getElementById('opt-hold').parentNode.appendChild(infoMsg);
+                }
+
+                if (holdVal === 20) {
+                    config.time = 90; // 90초 강제
+                    time60Btn.style.display = 'none'; // 60초 버튼 숨김
+                    time60Btn.classList.remove('active');
+                    time90Btn.classList.add('active');
+                    infoMsg.textContent = '※ 20초 버티기는 총 90초로 진행됩니다.';
+                } else {
+                    time60Btn.style.display = ''; // 60초 버튼 원상복구
+                    infoMsg.textContent = '';
+                }
+            }
+        });
 
         // 모드 전환 시 UI 변경
         document.getElementById('opt-mode').addEventListener('click', (e) => {
@@ -362,29 +388,21 @@
 
 
         function wheelRadius() {
-            return Math.min(sceneCanvas.width, sceneCanvas.height) * 0.15;
+            return Math.min(sceneCanvas.width, sceneCanvas.height) * 0.12;
         }
 
         function targetBox() {
             const w = sceneCanvas.width;
             const h = sceneCanvas.height;
-            let size, rx, lx, uy, dy;
-            
-            if (config.diff === 'easy') {
-                size = Math.min(w, h) * 0.25;
-                rx = 0.65; lx = 0.35;
-                uy = 0.35; dy = 0.65;
-            } else {
-                size = Math.min(w, h) * 0.15;
-                rx = 0.85; lx = 0.15;
-                uy = 0.15; dy = 0.85;
-            }
+            const size = Math.min(w, h) * 0.25;
+            const rx = 0.85, lx = 0.15;
+            const uy = 0.15, dy = 0.85;
 
             const map = {
                 right: { x: w * rx, y: h * 0.52, w: size, h: size },
                 left: { x: w * lx, y: h * 0.52, w: size, h: size },
-                up: { x: w * 0.50, y: h * uy, w: size, h: size },
-                down: { x: w * 0.50, y: h * dy, w: size, h: size }
+                up: { x: w * 0.50, y: h * uy, w: size * 2.5, h: size * 0.7 },
+                down: { x: w * 0.50, y: h * dy, w: size * 2.5, h: size * 0.7 }
             };
             return map[target];
         }
@@ -582,41 +600,35 @@
         }
 
         function updateGrabAndWheel() {
-            const handles = handlePositions();
-            const threshold = wheelRadius() * 0.55;
-            const leftOk = nearestHandDistance(handles.left) < threshold;
-            const rightOk = nearestHandDistance(handles.right) < threshold;
-            
             const wasGrabbed = wheel.grabbed;
-            wheel.grabbed = handsState.length >= 2 && leftOk && rightOk;
+            let canGrab = false;
+
+            if (handsState.length >= 2) {
+                const palms = handsState.slice(0, 2).map(hand => hand.palm);
+                const avgX = (palms[0].x + palms[1].x) / 2;
+                const avgY = (palms[0].y + palms[1].y) / 2;
+                
+                const cx = wheel.x * sceneCanvas.width;
+                const cy = wheel.y * sceneCanvas.height;
+                const distToWheel = Math.hypot(avgX - cx, avgY - cy);
+                
+                // 두 손의 평균 위치가 운전대 중심 근처(반지름 2.5배 이내)에 있으면 잡기 성공
+                if (distToWheel < wheelRadius() * 2.5) {
+                    canGrab = true;
+                }
+            }
+
+            // 한 번 잡으면 두 손이 화면에 보이기만 해도 유지
+            wheel.grabbed = wasGrabbed ? (handsState.length >= 2) : canGrab;
             
             if (wheel.grabbed) {
                 const palms = handsState.slice(0, 2).map(hand => hand.palm);
                 const avgX = palms.reduce((sum, p) => sum + p.x, 0) / palms.length;
                 const avgY = palms.reduce((sum, p) => sum + p.y, 0) / palms.length;
-                const handX = avgX / sceneCanvas.width;
-                const handY = avgY / sceneCanvas.height;
-
-                if (!wasGrabbed) {
-                    grabAnchor = { handX, handY, wheelX: wheel.x, wheelY: wheel.y };
-                }
-
-                const isNormal = config.diff === 'normal';
-                let movementRatio = isNormal ? 0.90 : 1.0;
-
-                let targetWheelX = grabAnchor.wheelX + (handX - grabAnchor.handX) * movementRatio;
-                let targetWheelY = grabAnchor.wheelY + (handY - grabAnchor.handY) * movementRatio;
-
-                // 추가 안전장치: 손이 이동했는데 목표 위치가 그대로라면 기본 1.0으로 복구
-                if ((handX !== grabAnchor.handX || handY !== grabAnchor.handY) && targetWheelX === wheel.x && targetWheelY === wheel.y) {
-                    movementRatio = 1.0;
-                    targetWheelX = grabAnchor.wheelX + (handX - grabAnchor.handX) * movementRatio;
-                    targetWheelY = grabAnchor.wheelY + (handY - grabAnchor.handY) * movementRatio;
-                }
-
-                // 움직임 고정 방지를 위해 속도 제한 없이 즉각 반영
-                wheel.x = targetWheelX;
-                wheel.y = targetWheelY;
+                
+                // 운전대를 두 손의 정중앙에 완벽하게 텔레포트 (오프셋 앵커 제거)
+                wheel.x = avgX / sceneCanvas.width;
+                wheel.y = avgY / sceneCanvas.height;
             } else {
                 grabAnchor = null;
             }
@@ -626,42 +638,45 @@
             const box = targetBox();
             const x = wheel.x * sceneCanvas.width;
             const y = wheel.y * sceneCanvas.height;
-            let tolP = config.diff === 'easy' ? 0.35 : 0.15;
-            const tolerance = box.w * tolP;
+            // 넓은 가로 박스 때문에 위/아래 판정이 중앙까지 침범하는 문제 해결 (박스 너비 비례가 아닌, 운전대 크기 비례로 고정)
+            const r = wheelRadius();
+            const tolerance = r * 1.5;
             return Math.abs(x - box.x) <= (box.w / 2 + tolerance) && Math.abs(y - box.y) <= (box.h / 2 + tolerance);
         }
 
         function checkSuccess() {
             if (!isExercising) return;
             const now = performance.now();
-            if (!wheel.grabbed) {
-                stillSince = null;
-                outOfTargetSince = null;
-                holdProgress = 0;
-                lastWheel = null;
-                setGuideMessage('운전대를 잡아주세요', '양손 손가락 선이 운전대 좌우 손잡이에 닿으면 잡기 성공입니다.');
-                return;
-            }
-            if (!isWheelInTargetWithTolerance()) {
+            
+            // 박스를 벗어났거나, 카메라가 손을 잠시 놓친 경우 모두 유예 기간(3초) 적용
+            if (!wheel.grabbed || !isWheelInTargetWithTolerance()) {
                 if (stillSince) {
                     if (!outOfTargetSince) outOfTargetSince = now;
-                    if (now - outOfTargetSince > 500) {
+                    // 팔이 아파서 잠시 벗어나거나 카메라에서 잠시 손이 사라져도 3초(3000ms) 동안은 유지
+                    if (now - outOfTargetSince > 3000) {
                         stillSince = null;
                         outOfTargetSince = null;
                         holdProgress = 0;
-                        setGuideMessage(targetText[target], '현재 목표 점선 네모 안으로 운전대를 옮겨주세요.');
+                        lastWheel = null;
+                        const msg = !wheel.grabbed ? '운전대를 다시 잡아주세요' : targetText[target];
+                        const sub = !wheel.grabbed ? '화면에 양손이 보이도록 해주세요.' : '현재 목표 점선 네모 안으로 운전대를 옮겨주세요.';
+                        setGuideMessage(msg, sub);
+                        return;
                     } else {
-                        // within tolerance time, do not reset yet
+                        // 유예 기간 중에는 시간 계산을 멈추지 않고 계속 진행
                     }
                 } else {
-                    setGuideMessage(targetText[target], '현재 목표 점선 네모 안으로 운전대를 옮겨주세요.');
+                    const msg = !wheel.grabbed ? '운전대를 잡아주세요' : targetText[target];
+                    const sub = !wheel.grabbed ? '화면에 양손이 보이게 모아주세요.' : '현재 목표 점선 네모 안으로 운전대를 옮겨주세요.';
+                    setGuideMessage(msg, sub);
+                    return;
                 }
-                return;
+            } else {
+                // in target AND grabbed
+                outOfTargetSince = null;
+                if (!stillSince) stillSince = now;
             }
             
-            // in target
-            outOfTargetSince = null;
-            if (!stillSince) stillSince = now;
             const holdLimit = parseInt(config.hold);
             holdProgress = (now - stillSince) / (holdLimit * 1000);
             setGuideMessage('좋습니다. 그대로 버텨주세요.', `진행도: ${currentTargetIndex + 1}/4 방향 | 조금 흔들려도 괜찮습니다.`);
@@ -685,7 +700,7 @@
             } else {
                 updateTopBarScore();
                 feedback = { text: '성공! 1점 획득', t: performance.now() };
-                setGuideMessage('성공! 1점 획득', '다음 목표 점선 네모로 이동하세요.');
+                setGuideMessage('성공! 1점 획득', '중앙으로 손을 모아 운전대를 다시 잡고 다음 목표로 이동하세요.');
             }
             target = targets[currentTargetIndex];
             wheel = { x: 0.5, y: 0.52, grabbed: false };
@@ -760,7 +775,7 @@
             resetExerciseRoundState();
             document.getElementById('ui-title').innerHTML = config.mode === 'group'
                 ? `${teamNames[config.team]} <span style="font-size:18px;">${currentPlayer}번 참가자</span>`
-                : '운전대 잡고 당기기';
+                : '운전대 스트레칭';
             if (!isGameLoopRunning) {
                 isGameLoopRunning = true;
                 gameLoop();
