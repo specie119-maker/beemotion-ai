@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="bgm.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         body { height: 100vh; display: flex; overflow: hidden; background: #f8fafc; color: #0f172a; }
@@ -769,6 +770,8 @@
         });
 
         function startGame() {
+            BGMManager.init('general', config.mode);
+            BGMManager.play(config.mode === 'group' && currentPlayer > 1);
             document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
             document.getElementById('top-bar').classList.add('active');
             document.getElementById('guide-overlay').style.display = 'block';
@@ -789,6 +792,7 @@
         }
 
         function endExercise() {
+            BGMManager.stop();
             isExercising = false;
             clearInterval(timerInterval);
             document.getElementById('top-bar').classList.remove('active');

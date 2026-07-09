@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="bgm.js"></script>
     
     <style>
         * { box-sizing: border-box; }
@@ -775,6 +776,8 @@
         let isGameLoopRunning = false;
 
         function startGame() {
+            BGMManager.init('general', config.mode);
+            BGMManager.play(config.mode === 'group' && currentPlayer > 1);
             console.log("startGame 실행됨");
             
             document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
@@ -821,6 +824,7 @@
         }
 
         function endExercise() {
+            BGMManager.stop();
             isExercising = false;
             clearInterval(timerInterval);
             if (window.objectInterval) clearTimeout(window.objectInterval);

@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="bgm.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
@@ -30,12 +31,26 @@
         .btn-action:hover { background: #e5a400; }
         .btn-camera { background: #3a2a14; }
         .btn-scoreboard { background: #f1f5f9; color: #475569; }
-        #exercise-area { flex: 1; position: relative; background: url('../asserts/tree.png') center/cover no-repeat; }
+        #exercise-area { flex: 1; position: relative; background: url('/asserts/fruit/tree.png') center/cover no-repeat; }
+        #tree-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
         #top-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px 40px; z-index: 60; display: none; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,0)); }
         #top-bar.active { display: flex; }
         .top-stat { min-width: 190px; padding: 10px 24px; border-radius: 18px; background: rgba(255,255,255,.92); color: #3a2a14; font-size: 28px; font-weight: 900; text-align: center; }
         .top-title { color: #fff; font-size: 34px; font-weight: 900; text-align: center; text-shadow: 0 3px 12px rgba(0,0,0,.45); }
-        #video_input { display: none; }
+        #video_input {
+            position: fixed;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            border: 4px solid #ffb703;
+            border-radius: 18px;
+            box-shadow: 0 10px 24px rgba(0,0,0,.18);
+            background: #111;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
         #output_canvas, #tree_canvas, #game_canvas, #hand_canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
         #output_canvas { transform: scaleX(-1); object-fit: cover; z-index: 1; opacity: 0; }
         #tree_canvas { z-index: 10; }
@@ -58,6 +73,13 @@
             #top-bar { padding: 14px; }
             .top-stat { min-width: 120px; font-size: 18px; padding: 8px 12px; }
             .top-title { font-size: 22px; }
+        }
+        .btn-ready {
+            background: #f97316 !important;
+            color: #fff !important;
+            transform: scale(1.02);
+            box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+            transition: all 0.2s ease;
         }
     </style>
 </head>
@@ -111,8 +133,9 @@
         </div>
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
-            <div id="hand-status" style="text-align:center; font-weight:900; color:#ef4444; font-size:18px;">카메라를 켜주세요</div>
+            <div id="hand-status" style="text-align:center; font-weight:900; color:#ef4444; font-size:18px;">먼저 카메라 켜기를 누르고, 브라우저 권한 창에서 카메라 허용을 선택하세요.</div>
             <button class="btn-action btn-camera" id="btn-camera" onclick="startCamera()">카메라 켜기</button>
+            <video id="video_input" autoplay playsinline muted></video>
             <button class="btn-action" id="btn-start">시작하기</button>
             <button class="btn-action btn-scoreboard" onclick="showScoreboard()" id="btn-scoreboard" style="display:none;">🏆 모든 팀 결과 보기</button>
             <button class="btn-action" style="background:#ef4444; display:none;" onclick="resetTeamScores()" id="btn-reset">전체 점수 초기화</button>
@@ -123,6 +146,7 @@
     </div>
 
     <div id="exercise-area">
+        <img id="tree-bg-img" src="/asserts/fruit/tree.png" onerror="this.onerror=null; this.src='../asserts/fruit/tree.png';" alt="">
         <div id="top-bar">
             <div class="top-stat" id="ui-time">남은시간 30초</div>
             <div class="top-title" id="ui-title">열매따기 운동</div>
@@ -139,7 +163,6 @@
             <div class="sub-guide">열매 가까이 손을 올리고, 손가락을 오므린 뒤 아래로 당기면 성공입니다.</div>
         </div>
 
-        <video id="video_input" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
         <canvas id="tree_canvas"></canvas>
         <canvas id="game_canvas"></canvas>
@@ -218,6 +241,30 @@
             { x: -100, y: -100, isGrabbing: false }
         ];
 
+        function showCameraPreview() {
+            videoElement.style.display = 'block';
+            videoElement.style.position = 'static';
+            videoElement.style.width = '100%';
+            videoElement.style.maxWidth = '520px';
+            videoElement.style.height = 'auto';
+            videoElement.style.opacity = '1';
+            videoElement.style.margin = '4px auto 8px auto';
+            videoElement.style.borderRadius = '18px';
+            videoElement.style.background = '#000';
+            videoElement.style.border = '4px solid #ffb703';
+            videoElement.style.pointerEvents = 'auto';
+        }
+
+        function hideCameraPreviewOnly() {
+            videoElement.style.position = 'fixed';
+            videoElement.style.left = '-9999px';
+            videoElement.style.top = '0';
+            videoElement.style.width = '1px';
+            videoElement.style.height = '1px';
+            videoElement.style.opacity = '0';
+            videoElement.style.pointerEvents = 'none';
+        }
+
         let currentTargetType = null;
         const fruitKoreanNames = { 'apple': '사과', 'watermelon': '수박', 'banana': '바나나', 'grape': '포도', 'strawberry': '딸기', 'peach': '복숭아', 'melon': '멜론', 'pineapple': '파인애플' };
         const fruitEmojis = { 'apple': '🍎', 'watermelon': '🍉', 'banana': '🍌', 'grape': '🍇', 'strawberry': '🍓', 'peach': '🍑', 'melon': '🍈', 'pineapple': '🍍' };
@@ -286,8 +333,15 @@
 
         function prepareSelectedTeamStart() {
             const startBtn = document.getElementById('btn-start');
-            startBtn.disabled = false;
-            startBtn.style.opacity = '1';
+            if (typeof cameraReady !== 'undefined' && cameraReady) {
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.classList.add('btn-ready');
+            } else {
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.classList.remove('btn-ready');
+            }
             startBtn.innerText = config.mode === 'group' ? `${teamNames[config.team]} 시작하기` : '시작하기';
         }
 
@@ -365,6 +419,7 @@
             resetExerciseRoundState();
             currentPlayer = 1;
             teamRunTotalScore = 0;
+            document.body.classList.remove('game-active');
             document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
             document.getElementById('top-bar').classList.remove('active');
             document.getElementById('settings-panel').classList.remove('hidden');
@@ -594,20 +649,35 @@
         const hands = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
         hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
         let handRecognized = false;
+        let handEverRecognized = false;
         let handLostFrames = 0;
+        let onResultsCount = 0;
 
         hands.onResults(results => {
+            onResultsCount++;
+            if (onResultsCount <= 5 || onResultsCount % 60 === 0) {
+                console.log('[LOG 8] hands.onResults 호출 여부: 호출됨');
+                console.log('[LOG 9] landmarks length 값: ', results.multiHandLandmarks ? results.multiHandLandmarks.length : 0);
+            }
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             handCtx.save();
             handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 handLostFrames = 0;
-                if (!handRecognized) {
-                    handRecognized = true;
-                    document.getElementById('dbg-hand').innerText = '성공';
-                    document.getElementById('hand-status').innerText = '손 인식 완료';
+                handRecognized = true;
+                document.getElementById('dbg-hand').innerText = '성공';
+                if (!handEverRecognized) {
+                    handEverRecognized = true;
+                    document.getElementById('hand-status').innerText = '카메라가 연결되었습니다. 화면 확인 후 시작하세요.';
                     document.getElementById('hand-status').style.color = '#22c55e';
-                    if (!isExercising) prepareSelectedTeamStart();
+                    cameraReady = true;
+                    const btnStart = document.getElementById('btn-start');
+                    if (btnStart) { 
+                        btnStart.disabled = false; 
+                        btnStart.style.opacity = '1';
+                        btnStart.classList.add('btn-ready');
+                    }
+                    if (typeof prepareSelectedTeamStart === 'function') prepareSelectedTeamStart();
                 }
                 results.multiHandLandmarks.forEach((landmarks, index) => {
                     const cursorIndex = index < 2 ? index : 0;
@@ -635,37 +705,180 @@
                 if (handLostFrames > 30 && handRecognized) {
                     handRecognized = false;
                     document.getElementById('dbg-hand').innerText = '실패';
-                    document.getElementById('hand-status').innerText = '손을 화면에 보여주세요';
-                    document.getElementById('hand-status').style.color = '#ef4444';
+                    if (!handEverRecognized) {
+                        document.getElementById('hand-status').innerText = '손을 화면에 보여주세요';
+                        document.getElementById('hand-status').style.color = '#ef4444';
+                    }
                 }
                 activePulls.forEach(pull => { pull.fruit = null; pull.startY = 0; pull.grabbed = false; });
             }
             handCtx.restore();
         });
 
-        function startCamera() {
+        let cameraReady = false;
+
+        async function startCamera() {
+            console.log('[LOG 1] startCamera 시작');
             const btnCam = document.getElementById('btn-camera');
-            btnCam.innerText = '카메라 로딩중...';
-            btnCam.style.opacity = '.7';
-            document.getElementById('hand-status').innerText = '카메라 권한을 허용해주세요...';
-            camera = new Camera(videoElement, {
-                onFrame: async () => { await hands.send({ image: videoElement }); },
-                width: 1280,
-                height: 720
-            });
-            camera.start().then(() => {
-                document.getElementById('dbg-cam').innerText = 'ON';
-                btnCam.innerText = '카메라 켜짐';
+            const btnStart = document.getElementById('btn-start');
+            const statusEl = document.getElementById('hand-status');
+            
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
+                console.warn('카메라 기능은 보안 연결(HTTPS) 환경에서 가장 안정적으로 작동합니다.');
+                if (statusEl) {
+                    statusEl.innerText = 'HTTPS 환경이 아닐 경우 카메라 권한이 차단될 수 있습니다.';
+                }
+            }
+
+            cameraReady = false;
+            handRecognized = false;
+            handEverRecognized = false;
+            handLostFrames = 0;
+            document.body.classList.remove('game-active');
+            showCameraPreview();
+
+            btnCam.innerText = '카메라 연결중';
+            btnCam.style.opacity = '0.7';
+            btnCam.disabled = true;
+            
+            if (btnStart) {
+                btnStart.disabled = true;
+                btnStart.style.opacity = '0.5';
+                btnStart.classList.remove('btn-ready');
+            }
+            if (statusEl) {
+                statusEl.innerText = '카메라 권한을 허용해주세요...';
+                statusEl.style.color = '#ef4444';
+            }
+            
+            try {
+                // 1. 네이티브 권한 직접 획득 (단일 초기화)
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 1280, height: 720 }, audio: false });
+                if (!stream) {
+                    console.error('[LOG 2] getUserMedia 실패: No stream');
+                    throw new Error('No stream');
+                }
+                console.log('[LOG 2] getUserMedia 성공');
+                
+                // 2. 비디오 스트림 연결 및 재생 (Safari 재생 정책 완벽 통과)
+                showCameraPreview();
+                videoElement.srcObject = stream;
+                videoElement.setAttribute('playsinline', '');
+                videoElement.muted = true;
+                
+                await new Promise((resolve, reject) => {
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(() => {
+                            console.log('[LOG 3] video.play 성공');
+                            resolve();
+                        }).catch(e => {
+                            console.error('[LOG 3] video.play 실패:', e);
+                            reject(e);
+                        });
+                    };
+                    videoElement.onerror = (e) => {
+                        console.error('[LOG 3] video.play 실패 (onerror):', e);
+                        reject(e);
+                    };
+                    setTimeout(() => {
+                        console.error('[LOG 3] video.play 실패: timeout');
+                        reject(new Error('Video play timeout'));
+                    }, 10000);
+                });
+                
+                if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+                    throw new Error('Invalid video dimensions');
+                }
+                console.log('[LOG 4] videoWidth / videoHeight:', videoElement.videoWidth, '/', videoElement.videoHeight);
+
+                console.log('[LOG 5] requestVideoFrameCallback 시작');
+                let processFrameCount = 0;
+                // 3. 직접 프레임 캡처 루프 (Camera 유틸리티의 이중 권한 충돌 방지)
+                async function processFrame() {
+                    processFrameCount++;
+                    if (processFrameCount <= 5 || processFrameCount % 60 === 0) {
+                        console.log(`[LOG 6] processFrame 호출 횟수: ${processFrameCount}`);
+                    }
+                    // 비디오가 정상적으로 존재할 때만 프레임 전송
+                    if (videoElement && videoElement.readyState >= 2) {
+                        try {
+                            await hands.send({ image: videoElement });
+                            if (processFrameCount <= 5 || processFrameCount % 60 === 0) {
+                                console.log('[LOG 7] hands.send 성공');
+                            }
+                        } catch (e) {
+                            console.error('[LOG 7] hands.send 실패:', e);
+                        }
+                    }
+                    // 애니메이션 렌더 락 방지를 위해 다음 프레임 요청 예약
+                    if (videoElement && videoElement.srcObject) {
+                        videoElement.requestVideoFrameCallback(processFrame);
+                    }
+                }
+                // 최초 캡처 시작
+                videoElement.requestVideoFrameCallback(processFrame);
+                
+                // 4. 상태 표시 업데이트 (카메라 ON / 손 인식 대기)
+                // 성공적으로 카메라가 켜졌을 뿐, 아직 손 인식은 완료되지 않음
+                btnCam.innerText = '카메라 켜기';
                 btnCam.disabled = true;
-                document.getElementById('hand-status').innerText = '손을 화면에 보여주세요';
-                document.getElementById('hand-status').style.color = '#ef4444';
-            }).catch(err => {
-                document.getElementById('hand-status').innerText = '카메라 오류: ' + err.message;
-            });
+                btnCam.style.opacity = '1';
+                
+                const dbgCam = document.getElementById('dbg-cam');
+                if (dbgCam) dbgCam.innerText = 'ON';
+                
+                if (statusEl) {
+                    statusEl.innerText = '카메라가 연결되었습니다. 화면 확인 후 시작하세요.';
+                    statusEl.style.color = '#22c55e';
+                }
+                
+                // 카메라가 켜지면 바로 시작 버튼을 활성화합니다.
+                cameraReady = true;
+                if (btnStart) {
+                    btnStart.disabled = false;
+                    btnStart.style.opacity = '1';
+                    btnStart.classList.add('btn-ready');
+                }
+                if (typeof prepareSelectedTeamStart === 'function') prepareSelectedTeamStart();
+                
+                if (typeof isCameraOn !== 'undefined') isCameraOn = true;
+                
+            } catch (err) {
+                console.error('Camera error:', err);
+                if (statusEl) {
+                    statusEl.innerText = '카메라 권한을 허용해야 운동을 시작할 수 있습니다.';
+                    statusEl.style.color = '#ef4444';
+                }
+                btnCam.innerText = '카메라 켜기';
+                btnCam.style.opacity = '1';
+                btnCam.disabled = false;
+                hideCameraPreviewOnly();
+                
+                const dbgCam = document.getElementById('dbg-cam');
+                if (dbgCam) dbgCam.innerText = 'OFF';
+                
+                if (btnStart) {
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnStart.classList.remove('btn-ready');
+                }
+                if (typeof isCameraOn !== 'undefined') isCameraOn = false;
+                cameraReady = false;
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.message.includes('Permission')) {
+                    alert('카메라 권한이 차단되었습니다. 브라우저 주소창 왼쪽 자물쇠/카메라 아이콘에서 카메라를 허용으로 변경한 뒤 새로고침하세요.');
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-start').disabled = true;
+            document.getElementById('btn-start').style.opacity = '0.5';
             document.getElementById('btn-start').addEventListener('click', () => {
+                if (!cameraReady) {
+                    alert('먼저 카메라 권한을 허용해주세요');
+                    return;
+                }
                 currentPlayer = 1;
                 teamRunTotalScore = 0;
                 resetExerciseRoundState();
@@ -677,6 +890,10 @@
         });
 
         function startGame() {
+            BGMManager.init('general', config.mode);
+            BGMManager.play(config.mode === 'group' && currentPlayer > 1);
+            document.body.classList.add('game-active');
+            hideCameraPreviewOnly();
             document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
             document.getElementById('top-bar').classList.add('active');
             document.getElementById('guide-overlay').style.display = 'block';
@@ -705,6 +922,7 @@
         }
 
         function endExercise() {
+            BGMManager.stop();
             isExercising = false;
             clearInterval(timerInterval);
             document.getElementById('top-bar').classList.remove('active');
@@ -781,6 +999,7 @@
         function closeScoreboard() {
             document.getElementById('scoreboard-screen').classList.remove('active');
             document.getElementById('settings-panel').classList.remove('hidden');
+            document.body.classList.remove('game-active');
             prepareSelectedTeamStart();
         }
 

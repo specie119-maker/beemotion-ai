@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="bgm.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         body { height: 100vh; display: flex; overflow: hidden; background: #f8fafc; color: #1f2937; }
@@ -362,6 +363,8 @@
         }
 
         function startRound() {
+            BGMManager.init('walk', 'individual');
+            BGMManager.play();
             if (!isCameraOn) {
                 alert("카메라를 먼저 켜주세요.");
                 return;
@@ -401,6 +404,7 @@
         }
 
         function endRound() {
+            BGMManager.stop();
             isRunning = false;
             clearInterval(gameTimer);
             walkingState = false;
