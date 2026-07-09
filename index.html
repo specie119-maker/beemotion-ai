@@ -302,6 +302,20 @@
             margin-bottom: 40px;
         }
 
+        .video-section {
+            width: 100%;
+            padding: 60px 20px;
+        }
+
+        .video-section video {
+            width: 100%;
+            max-width: 1000px;
+            height: auto;
+            border-radius: 24px;
+            display: block;
+            margin: 0 auto;
+        }
+
         .hero-buttons {
             display: flex;
             gap: 20px;
@@ -868,12 +882,23 @@
             </h1>
             <div class="hero-subtitle" data-i18n="hero_subtitle">시니어 AI 움직임 프로그램</div>
             <div class="hero-desc" data-i18n="hero_desc">즐겁게 움직이고 건강하게 생활하세요</div>
+            
             <div class="hero-buttons">
                 <a href="#programs" class="btn-primary" data-i18n="hero_btn_free">무료체험 시작</a>
                 <a href="#programs" class="btn-secondary" id="demoBtn" data-i18n="hero_btn_demo">데모 시청</a>
             </div>
         </div>
     </header>
+
+    <!-- Video Section -->
+    <section class="video-section" style="background-color: var(--cream);">
+        <div class="section-header" style="margin-bottom: 40px;">
+            <h2 class="section-title">BeeMotion 데모 영상</h2>
+        </div>
+        <video autoplay muted loop playsinline preload="metadata">
+            <source src="asserts/videos/fruit_picking_intro.mp4" type="video/mp4">
+        </video>
+    </section>
 
     <!-- Brand Section -->
     <section id="brand">
