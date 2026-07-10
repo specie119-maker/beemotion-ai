@@ -300,10 +300,9 @@
         }
 
         function getDiffConfig() {
-            if (config.diff === 'easy') return { time: 60, itemR: 80, speedMult: 0.6, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 1, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다." };
-            if (config.diff === 'normal') return { time: 45, itemR: 80, speedMult: 0.7, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 2, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다." };
-            if (config.diff === 'hard') return { time: 30, itemR: 80, speedMult: 0.8, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 3, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다. 어려움의 세 번째 문어는 잡을 수 있어요!" };
-            return { time: 60, itemR: 80, speedMult: 0.6, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 1, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다." };
+            if (config.diff === 'easy') return { time: 60, itemR: 80, speedMult: 0.6, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 3, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다.", spawnInterval: 2000 };
+            if (config.diff === 'hard') return { time: 30, itemR: 80, speedMult: 0.8, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 4, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다. 어려움의 세 번째 문어는 잡을 수 있어요!", spawnInterval: 1000 };
+            return { time: 60, itemR: 80, speedMult: 0.6, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 1, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다.", spawnInterval: 2000 };
         }
 
         function showCameraPreview() {
@@ -613,7 +612,7 @@
             basketStackedItems = [];
             octopusAppearCount = 0;
             createInitialItems();
-            octopusSpawnTimer = performance.now() + 8000 + Math.random() * 4000;
+            octopusSpawnTimer = performance.now() + 3000 + Math.random() * 3000;
             octopusCount = 0;
             document.getElementById('ui-score').innerText = '딴 보물 0개';
             document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
@@ -751,6 +750,16 @@
                         item.x += item.dir * item.speed * (dt / 16);
                         item.y += Math.sin(t / 300) * 0.8 * (dt/16);
                     }
+                    
+                    const w = gameCanvas.width || window.innerWidth;
+                    const h = gameCanvas.height || window.innerHeight;
+                    if (item.x < -200 && item.dir === -1) {
+                        item.x = w + 200;
+                        item.y = h * 0.15 + Math.random() * (h * 0.65);
+                    } else if (item.x > w + 200 && item.dir === 1) {
+                        item.x = -200;
+                        item.y = h * 0.15 + Math.random() * (h * 0.65);
+                    }
                 } else if (behavior === 'octopus') {
                     if (item.escaped) {
                         item.dead = true;
@@ -775,7 +784,7 @@
                             createInkParticles(item.x, item.y);
                         }
                         if (octopusSpawnTimer === 0) {
-                            octopusSpawnTimer = performance.now() + 8000 + Math.random() * 4000;
+                            octopusSpawnTimer = performance.now() + 3000 + Math.random() * 3000;
                         }
                     }
                 }
