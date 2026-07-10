@@ -1380,9 +1380,40 @@
             }
         });
 
+        const haenyeoTracks = [
+            '../asserts/mp3/01.mp3',
+            '../asserts/mp3/01_30min.mp3',
+            '../asserts/mp3/02.mp3',
+            '../asserts/mp3/02_100min.mp3',
+            '../asserts/mp3/03 -30min.mp3',
+            '../asserts/mp3/04.mp3',
+            '../asserts/mp3/05.mp3',
+            '../asserts/mp3/06.mp3',
+            '../asserts/mp3/07.mp3'
+        ].filter(src => !src.toLowerCase().includes('walk'));
+
+        const bgMusic = new Audio();
+        bgMusic.loop = true;
+        bgMusic.volume = 0.45;
+
+        function playRandomHaenyeoMusic() {
+            if (!haenyeoTracks.length) return;
+            const nextTrack = haenyeoTracks[Math.floor(Math.random() * haenyeoTracks.length)];
+            bgMusic.pause();
+            bgMusic.src = nextTrack;
+            bgMusic.currentTime = 0;
+            bgMusic.play().catch(err => {
+                console.warn('배경음악 재생 실패:', err);
+            });
+        }
+
+        function stopHaenyeoMusic() {
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+        }
+
         function startGame() {
-            BGMManager.init('general', config.mode);
-            BGMManager.play(config.mode === 'group' && currentPlayer > 1);
+            playRandomHaenyeoMusic();
             document.body.classList.add('game-active');
             hideCameraPreviewOnly();
             document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
@@ -1420,7 +1451,7 @@
         }
 
         function endExercise() {
-            BGMManager.stop();
+            stopHaenyeoMusic();
             isExercising = false;
             clearInterval(timerInterval);
             document.getElementById('top-bar').classList.remove('active');
