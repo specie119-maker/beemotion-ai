@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeMotion - 전복 따러 가요</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="bgm.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { background: #000; color: #2f2414; overflow: hidden; display: flex; height: 100vh; }
+        
+        #settings-panel { width: 450px; background: #fff; padding: 40px; box-shadow: 2px 0 20px rgba(0,0,0,.06); z-index: 10000; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; position: relative; }
+        #settings-panel.hidden { display: none; }
+        
+        .settings-title { font-size: 30px; font-weight: 900; color: #0284c7; }
+        .program-desc { font-size: 17px; line-height: 1.65; font-weight: 700; color: #475569; }
+        .settings-group { display: flex; flex-direction: column; gap: 10px; }
+        .settings-group label { font-size: 18px; font-weight: 900; color: #0f172a; }
+        
+        .radio-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        .radio-btn { flex: 1; padding: 13px 10px; border: 2px solid #e2e8f0; border-radius: 12px; text-align: center; cursor: pointer; font-weight: 800; background: #fff; user-select: none; transition: all 0.2s; }
+        .radio-btn.active { border-color: #0284c7; background: #f0f9ff; color: #0369a1; }
+        .btn-team.active[data-val="red"] { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+        .btn-team.active[data-val="blue"] { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+        .btn-team.active[data-val="yellow"] { border-color: #eab308; background: #fefce8; color: #a16207; }
+        
+        .btn-action { background: #0284c7; color: #fff; border: 0; padding: 18px; border-radius: 16px; font-size: 20px; font-weight: 900; cursor: pointer; transition: all 0.2s; }
+        .btn-action:hover { background: #0369a1; transform: scale(1.02); }
+        .btn-camera { background: #1e293b; }
+        .btn-camera:hover { background: #0f172a; }
+        .btn-scoreboard { background: #f1f5f9; color: #475569; }
+        .btn-scoreboard:hover { background: #e2e8f0; }
+        
+        #exercise-area { flex: 1; position: relative; background: #0284c7; overflow: hidden; display: flex; }
+        
+        @keyframes oceanBreath {
+            0% { transform: scale(1.02) translate(0, 0); }
+            50% { transform: scale(1.06) translate(-0.5%, 1%); }
+            100% { transform: scale(1.02) translate(0, 0); }
+        }
+
+        #bg-img { 
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; display: block; opacity: 1;
+            animation: oceanBreath 25s ease-in-out infinite; transform-origin: center;
+        }
+        
+        .ocean-overlay {
+            position: absolute; inset: 0; pointer-events: none; z-index: 2;
+            background: 
+                radial-gradient(ellipse at 50% -20%, rgba(255,255,255,0.08) 0%, transparent 70%),
+                linear-gradient(180deg, rgba(2, 132, 199, 0.08) 0%, rgba(3, 105, 161, 0.15) 100%);
+        }
+
+        #top-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 25px 40px; z-index: 50; display: none; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, rgba(0,0,0,.5), rgba(0,0,0,0)); pointer-events: none; }
+        #top-bar.active { display: flex !important; }
+        .top-stat { min-width: 190px; padding: 12px 28px; border-radius: 24px; background: rgba(255,255,255,.95); color: #0f172a; font-size: 32px; font-weight: 900; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); pointer-events: auto; }
+        .top-title { color: #fff; font-size: 38px; font-weight: 900; text-align: center; text-shadow: 0 3px 12px rgba(0,0,0,.6); pointer-events: auto; }
+        
+        #video_input {
+            position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+            border: 4px solid #0ea5e9; border-radius: 18px; box-shadow: 0 10px 24px rgba(0,0,0,.18);
+            background: #111; object-fit: cover; transform: scaleX(-1); z-index: 10001;
+        }
+        
+        #effects_canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+        #game_canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; }
+        #hand_canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
+        
+        #guide-overlay { position: absolute; top: 110px; left: 50%; transform: translateX(-50%); z-index: 55; width: 90%; max-width: 900px; padding: 18px 24px; border-radius: 20px; background: rgba(255,255,255,.96); color: #0f172a; border: 4px solid #0ea5e9; box-shadow: 0 10px 30px rgba(0,0,0,.2); display: none; text-align: center; pointer-events: none; transition: opacity 0.4s ease; opacity: 1; }
+        #guide-overlay .main-guide { font-size: 24px; font-weight: 900; color: #0284c7; margin-bottom: 5px; }
+        #guide-overlay .sub-guide { font-size: 18px; font-weight: 800; line-height: 1.5; color: #475569; }
+        
+        .overlay-screen { position: absolute; inset: 0; z-index: 10000; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); }
+        .overlay-screen.active { display: flex; }
+        .result-title { font-size: 72px; font-weight: 900; color: #fff; margin-bottom: 24px; text-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .result-score { font-size: 64px; font-weight: 900; color: #facc15; margin-bottom: 32px; text-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .team-score-list { font-size: 44px; font-weight: 800; text-align: left; margin-bottom: 50px; color: #fff; }
+        
+        #countdown-screen { background: rgba(0,0,0,.85); z-index: 10001; }
+        #countdown-text { font-size: 280px; font-weight: 900; color: #0ea5e9; text-shadow: 0 0 40px rgba(14,165,233,0.6); }
+        
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            #settings-panel { width: 100%; height: auto; max-height: 50vh; padding: 20px; }
+            #top-bar { padding: 15px; }
+            .top-stat { min-width: 120px; font-size: 20px; padding: 10px 16px; }
+            .top-title { font-size: 24px; }
+            #guide-overlay { width: 90%; padding: 20px; bottom: 20px; }
+            #guide-overlay .main-guide { font-size: 22px; }
+            #guide-overlay .sub-guide { font-size: 16px; }
+        }
+        .btn-ready {
+            background: #f97316 !important;
+            color: #fff !important;
+            transform: scale(1.03);
+            box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div id="settings-panel">
+        <div class="settings-title">🌊 전복 따러 가요</div>
+        <div class="program-desc">
+            진짜 해녀가 되어 바닷속을 헤엄치며 보물을 채집해 보세요.<br>보물 위에 손 커서를 일정 시간 올려두면 채집할 수 있습니다.
+        </div>
+
+        <div id="group-settings" style="display: none; flex-direction: column; gap: 20px;">
+            <div class="settings-group">
+                <label>팀 선택</label>
+                <div class="radio-options" id="opt-team">
+                    <div class="radio-btn btn-team active" data-val="red">🔴 빨강팀</div>
+                    <div class="radio-btn btn-team" data-val="blue">🔵 파랑팀</div>
+                    <div class="radio-btn btn-team" data-val="yellow">🟡 노랑팀</div>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label>참가 인원</label>
+                <div class="radio-options" id="opt-players">
+                    <div class="radio-btn" data-val="2">2명</div>
+                    <div class="radio-btn active" data-val="3">3명</div>
+                    <div class="radio-btn" data-val="4">4명</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <label>난이도 설정</label>
+            <div class="radio-options" id="opt-diff">
+                <div class="radio-btn active" data-val="easy">쉬움</div>
+                <div class="radio-btn" data-val="normal">보통</div>
+                <div class="radio-btn" data-val="hard">어려움</div>
+            </div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 12px;">
+            <div id="cam-title" style="text-align:center; font-size: 20px; font-weight: 900; color: #3b82f6;">카메라 사용 준비</div>
+            <div id="hand-status" style="text-align:center; font-weight:900; color:#475569; font-size:16px;">카메라 켜기를 누른 후 브라우저 안내 창에서 카메라 사용을 허용해 주세요.</div>
+            <button class="btn-action btn-camera" id="btn-camera" onclick="startCamera()">카메라 켜기</button>
+            <video id="video_input" autoplay playsinline muted></video>
+            <button class="btn-action" id="btn-start" disabled style="opacity:0.5;">시작하기</button>
+            <button class="btn-action btn-scoreboard" onclick="showScoreboard()" id="btn-scoreboard" style="display:none;">🏆 모든 팀 결과 보기</button>
+            <button class="btn-action" style="background:#ef4444; display:none;" onclick="resetTeamScores()" id="btn-reset">전체 점수 초기화</button>
+        </div>
+        <div style="text-align:center; margin-top: 10px;">
+            <a href="../index.html" style="color:#94a3b8; font-weight:700; text-decoration:none;">메인으로 돌아가기</a>
+        </div>
+    </div>
+
+    <div id="exercise-area">
+        <img id="bg-img" src="../asserts/haenyeo/haenyeo_ocean_bg.png" onerror="console.error('Failed to load background image', this.src);" alt="">
+        <div class="ocean-overlay"></div>
+        
+        <canvas id="effects_canvas"></canvas>
+        <canvas id="game_canvas"></canvas>
+        <canvas id="hand_canvas"></canvas>
+
+        <div id="top-bar">
+            <div class="top-stat" id="ui-time">남은시간 60초</div>
+            <div class="top-title" id="ui-title">전복 따러 가요</div>
+            <div class="top-stat" id="ui-score" style="color:#0ea5e9;">딴 보물 0개</div>
+        </div>
+
+        <div id="guide-overlay">
+            <div class="main-guide">손을 천천히 움직여 바다 보물 위에 머물러 보세요!</div>
+            <div class="sub-guide">채집한 보물을 오른쪽 아래 <b>망태기</b>에 넣으면 점수가 올라갑니다.</div>
+        </div>
+
+        <div class="overlay-screen" id="countdown-screen">
+            <div id="countdown-text">3</div>
+        </div>
+
+        <div class="overlay-screen" id="result-screen">
+            <canvas id="confetti-single" style="position:absolute; width:100%; height:100%; pointer-events:none; z-index:-1;"></canvas>
+            <div style="font-size:48px; color:#bae6fd; font-weight:800; margin-bottom:15px;" id="res-subtitle"></div>
+            <div class="result-title" id="res-title">수고하셨습니다</div>
+            <div class="result-score" id="res-score">딴 보물 0개</div>
+            <div class="result-score" id="res-time" style="font-size:42px; margin-bottom:60px; color:#e2e8f0;">운동 시간: 0초</div>
+            <div id="res-next-notice" style="font-size:32px; margin-bottom:35px; color:#bae6fd; display:none;">다음 참가자 준비하세요.</div>
+            <button class="btn-action" style="padding:24px 70px; font-size:32px; border-radius: 20px;" id="res-btn" onclick="nextAction()">다시 시작하기</button>
+        </div>
+
+        <div class="overlay-screen" id="scoreboard-screen">
+            <canvas id="confetti" style="position:absolute; width:100%; height:100%; pointer-events:none; z-index:-1;"></canvas>
+            <div class="result-title" style="font-size:96px; margin-bottom:15px; color: #facc15;">🎉 결과 보기 🎉</div>
+            <div style="font-size:56px; font-weight:900; margin-bottom:50px; color:#fff;" id="score-winner"></div>
+            <div class="team-score-list" id="score-list"></div>
+            <button class="btn-action" style="padding:24px 70px; font-size:32px; border-radius: 20px;" onclick="closeScoreboard()">처음으로 돌아가기</button>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const initMode = urlParams.get('mode') || 'individual';
+        const config = { mode: initMode, team: 'red', players: 3, diff: 'easy' };
+        const teamNames = { red: '🔴 빨강팀', blue: '🔵 파랑팀', yellow: '🟡 노랑팀' };
+        const plainNames = { red: '빨강팀', blue: '파랑팀', yellow: '노랑팀' };
+        const orderedTeams = ['red', 'blue', 'yellow'];
+        const scoreKey = 'beeMotionHaenyeoTeamScores';
+        const completedKey = 'beeMotionHaenyeoTeamCompleted';
+        let teamScores = { red: 0, blue: 0, yellow: 0 };
+        let teamCompleted = { red: false, blue: false, yellow: false };
+        try { teamScores = { ...teamScores, ...JSON.parse(sessionStorage.getItem(scoreKey) || '{}') }; } catch(e) {}
+        try { teamCompleted = { ...teamCompleted, ...JSON.parse(sessionStorage.getItem(completedKey) || '{}') }; } catch(e) {}
+
+        if (config.mode === 'group') {
+            document.getElementById('group-settings').style.display = 'flex';
+            document.getElementById('btn-scoreboard').style.display = 'block';
+            document.getElementById('btn-reset').style.display = 'block';
+        }
+
+        const videoElement = document.getElementById('video_input');
+        const effectsCanvas = document.getElementById('effects_canvas');
+        const effectsCtx = effectsCanvas.getContext('2d');
+        const gameCanvas = document.getElementById('game_canvas');
+        const gameCtx = gameCanvas.getContext('2d');
+        const handCanvas = document.getElementById('hand_canvas');
+        const handCtx = handCanvas.getContext('2d');
+        
+        let isExercising = false;
+        let score = 0;
+        let timeLeft = 0;
+        let timerInterval = null;
+        let currentPlayer = 1;
+        let octopusAppearCount = 0;
+        
+        let items = [];
+        let bubbles = [];
+        let lightRays = [];
+        let particles = [];
+        let basketStackedItems = [];
+        
+        let isGameLoopRunning = false;
+        let lastTime = performance.now();
+        
+        let activeCursors = [
+            { x: -100, y: -100, hoverItem: null, hoverTime: 0, grabbedItem: null },
+            { x: -100, y: -100, hoverItem: null, hoverTime: 0, grabbedItem: null }
+        ];
+
+        const itemTypes = {
+            'abalone': { name: '전복', behavior: 'sway', imageSrc: '../asserts/images/abalone.png', grabbable: true },
+            'seacucumber': { name: '해삼', behavior: 'crawl', imageSrc: '../asserts/images/sea_cucumber.png', grabbable: true },
+            'conch': { name: '소라', behavior: 'float', imageSrc: '../asserts/images/conch.png', grabbable: true },
+            'fish1': { name: '열대어1', behavior: 'swim', imageSrc: '../asserts/images/fish1.png', grabbable: false, evasive: true },
+            'fish2': { name: '열대어2', behavior: 'swim', imageSrc: '../asserts/images/fish2.png', grabbable: false, evasive: true },
+            'fish3': { name: '복어', behavior: 'swim', imageSrc: '../asserts/images/fish3.png', grabbable: false, evasive: true },
+            'octopus': { name: '문어', behavior: 'octopus', imageSrc: '../asserts/images/octopus.png', grabbable: false, evasive: false, inkOnTouch: true }
+        };
+
+        function preloadImages() {
+            for (const key in itemTypes) {
+                const type = itemTypes[key];
+                if (type.imageSrc) {
+                    const img = new Image();
+                    img.onload = () => {
+                        type.img = img;
+                        type.imgLoaded = true;
+                    };
+                    img.onerror = () => {
+                        console.error('Failed to load image for ' + type.name + ': ' + type.imageSrc);
+                        type.imgLoaded = false;
+                        type.imgError = true;
+                    };
+                    img.src = type.imageSrc;
+                }
+            }
+        }
+        
+        preloadImages();
+
+        let hookReady = false;
+        let fistStartTime = 0;
+        let octopusSpawnTimer = 0;
+        let octopusCount = 0;
+
+        function isFist(landmarks) {
+            const wrist = landmarks[0];
+            let foldedCount = 0;
+            const fingers = [
+                {tip: 8, pip: 6},
+                {tip: 12, pip: 10},
+                {tip: 16, pip: 14},
+                {tip: 20, pip: 18}
+            ];
+            for (const f of fingers) {
+                const tipDist = Math.hypot(landmarks[f.tip].x - wrist.x, landmarks[f.tip].y - wrist.y);
+                const pipDist = Math.hypot(landmarks[f.pip].x - wrist.x, landmarks[f.pip].y - wrist.y);
+                // When a finger is folded, its tip is closer to the wrist than its PIP joint
+                if (tipDist < pipDist) {
+                    foldedCount++;
+                }
+            }
+            return foldedCount >= 3; // At least 3 fingers folded means fist
+        }
+
+        function getDiffConfig() {
+            if (config.diff === 'easy') return { time: 60, itemR: 80, speedMult: 0.6, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 1, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다." };
+            if (config.diff === 'normal') return { time: 45, itemR: 80, speedMult: 0.7, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 2, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다." };
+            if (config.diff === 'hard') return { time: 30, itemR: 80, speedMult: 0.8, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 3, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다. 어려움의 세 번째 문어는 잡을 수 있어요!" };
+            return { time: 60, itemR: 80, speedMult: 0.6, basketW: 360, basketH: 260, reqHover: 450, dropDepth: 0.0, hookLen: 130, hookRadius: 70, leaveRadius: 100, maxOctopus: 1, guide: "오른손 갈고리와 왼손을 이용해 해산물을 채집해 보세요!<br>문어는 건드리면 먹물을 뿜습니다." };
+        }
+
+        function showCameraPreview() {
+            videoElement.style.display = 'block';
+            videoElement.style.position = 'static';
+            videoElement.style.width = '100%';
+            videoElement.style.maxWidth = '400px';
+            videoElement.style.height = 'auto';
+            videoElement.style.opacity = '1';
+            videoElement.style.margin = '4px auto 8px auto';
+            videoElement.style.borderRadius = '24px';
+            videoElement.style.background = '#000';
+            videoElement.style.border = '4px solid #0ea5e9';
+            videoElement.style.pointerEvents = 'none';
+        }
+
+        function hideCameraPreviewOnly() {
+            videoElement.style.position = 'fixed';
+            videoElement.style.left = '-9999px';
+            videoElement.style.top = '0';
+            videoElement.style.width = '1px';
+            videoElement.style.height = '1px';
+            videoElement.style.opacity = '0';
+            videoElement.style.pointerEvents = 'none';
+        }
+
+        function resizeCanvases() {
+            const area = document.getElementById('exercise-area');
+            const w = area.clientWidth || window.innerWidth;
+            const h = area.clientHeight || window.innerHeight;
+            effectsCanvas.width = w;
+            effectsCanvas.height = h;
+            gameCanvas.width = w;
+            gameCanvas.height = h;
+            handCanvas.width = w;
+            handCanvas.height = h;
+            
+            initOceanEffects();
+            if(!isExercising && !isGameLoopRunning) {
+                createInitialItems();
+            }
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        function setupRadio(groupId, configKey) {
+            const container = document.getElementById(groupId);
+            if (!container) return;
+            container.querySelectorAll('.radio-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    config[configKey] = btn.getAttribute('data-val');
+                    if (configKey === 'team') {
+                        currentPlayer = 1;
+                        teamRunTotalScore = 0;
+                        prepareSelectedTeamStart();
+                    } else if (configKey === 'diff' && !isExercising) {
+                        createInitialItems();
+                    }
+                });
+            });
+        }
+        setupRadio('opt-team', 'team');
+        setupRadio('opt-players', 'players');
+        setupRadio('opt-diff', 'diff');
+
+        function saveTeamProgress() {
+            sessionStorage.setItem(scoreKey, JSON.stringify(teamScores));
+            sessionStorage.setItem(completedKey, JSON.stringify(teamCompleted));
+        }
+
+        function resetTeamScores() {
+            if (confirm('모든 팀의 기록을 초기화할까요?')) {
+                teamScores = { red: 0, blue: 0, yellow: 0 };
+                teamCompleted = { red: false, blue: false, yellow: false };
+                saveTeamProgress();
+                alert('초기화되었습니다.');
+            }
+        }
+
+        function prepareSelectedTeamStart() {
+            const startBtn = document.getElementById('btn-start');
+            if (typeof cameraReady !== 'undefined' && cameraReady) {
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.classList.add('btn-ready');
+            } else {
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.classList.remove('btn-ready');
+            }
+            startBtn.innerText = config.mode === 'group' ? `${teamNames[config.team]} 시작하기` : '시작하기';
+        }
+
+        function allTeamsCompleted() {
+            return orderedTeams.every(team => teamCompleted[team]);
+        }
+
+        function initOceanEffects() {
+            bubbles = [];
+            lightRays = [];
+            const w = effectsCanvas.width || window.innerWidth;
+            const h = effectsCanvas.height || window.innerHeight;
+            
+            for(let i=0; i<30; i++) {
+                bubbles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: Math.random() * 6 + 2,
+                    speed: Math.random() * 1.5 + 0.5,
+                    wobble: Math.random() * Math.PI * 2,
+                    wobbleSpeed: Math.random() * 0.05 + 0.02
+                });
+            }
+            
+            const numRays = 5;
+            for(let i=0; i<numRays; i++) {
+                lightRays.push({
+                    xBase: w / numRays * i,
+                    widthTop: Math.random() * 100 + 50,
+                    widthBottom: Math.random() * 200 + 100,
+                    angleBase: Math.random() * 0.5 - 0.25,
+                    speed: Math.random() * 0.001 + 0.0005,
+                    timeOffset: Math.random() * 10000
+                });
+            }
+        }
+
+        function createInitialItems() {
+            items = [];
+            // fixed pool: 2 abalone, 2 seacucumber, 2 conch, 4~6 fish
+            spawnItem('abalone'); spawnItem('abalone');
+            spawnItem('seacucumber'); spawnItem('seacucumber');
+            spawnItem('conch'); spawnItem('conch');
+            const fishCount = Math.floor(Math.random() * 3) + 4; // 4 to 6
+            for(let i=0; i<fishCount; i++) spawnFish();
+        }
+
+        function ensureGrabbableItems() {
+            const types = ['abalone', 'seacucumber', 'conch'];
+            types.forEach(type => {
+                const count = items.filter(i => i.typeId === type).length;
+                if (count < 1) {
+                    spawnItem(type);
+                }
+            });
+        }
+
+        function getAbaloneFixedPositions(w, h) {
+            const margin = 120;
+            return [
+                {x: margin + w * 0.1, y: h * 0.85 - margin},
+                {x: margin + w * 0.1, y: h * 0.35 + margin},
+                {x: w * 0.9 - margin, y: h * 0.3 + margin},
+                {x: w * 0.9 - margin, y: h * 0.85 - margin}
+            ];
+        }
+
+        function spawnItem(specificType = null) {
+            const w = gameCanvas.width || window.innerWidth;
+            const h = gameCanvas.height || window.innerHeight;
+            const diffConf = getDiffConfig();
+            const margin = diffConf.itemR * 2;
+            let x, y;
+            
+            const grabbableTypes = ['abalone', 'seacucumber', 'conch'];
+            const typeId = specificType || grabbableTypes[Math.floor(Math.random() * grabbableTypes.length)];
+            
+            if (typeId === 'abalone') {
+                const spots = getAbaloneFixedPositions(w, h);
+                const spot = spots[Math.floor(Math.random() * spots.length)];
+                x = spot.x + (Math.random() * 40 - 20);
+                y = spot.y + (Math.random() * 40 - 20);
+            } else {
+                let attempts = 0;
+                do {
+                    x = margin + Math.random() * (w - margin * 2.5);
+                    y = h * 0.2 + Math.random() * (h * 0.7 - margin * 2);
+                    attempts++;
+                } while(x > w - diffConf.basketW - 80 && y > h - diffConf.basketH - 80 && attempts < 50);
+
+                if (typeId === 'seacucumber') {
+                    y = h - margin - (Math.random() * h * 0.12);
+                }
+            }
+            
+            items.push({
+                id: Math.random().toString(),
+                x: x, y: y,
+                baseX: x, baseY: y,
+                r: diffConf.itemR,
+                type: itemTypes[typeId],
+                typeId: typeId,
+                grabbed: false,
+                spawnTime: performance.now(),
+                timeOffset: Math.random() * 10000
+            });
+        }
+        
+        function spawnOctopus() {
+            const w = gameCanvas.width || window.innerWidth;
+            const h = gameCanvas.height || window.innerHeight;
+            octopusAppearCount++;
+            
+            let isGrabbable = false;
+            if (config.diff === 'hard' && octopusAppearCount === 3) {
+                isGrabbable = true;
+            }
+            
+            const startX = Math.random() > 0.5 ? -100 : w + 100;
+            const startY = h * 0.5 + Math.random() * (h * 0.4);
+            
+            items.push({
+                id: 'octopus_' + Math.random().toString(),
+                x: startX, y: startY,
+                r: 90,
+                type: itemTypes['octopus'],
+                typeId: 'octopus',
+                grabbed: false,
+                spawnTime: performance.now(),
+                inkTime: 0,
+                escaped: false,
+                isSpecial: isGrabbable,
+                grabbable: isGrabbable
+            });
+            if (isGrabbable) {
+                createScorePopup(w/2, h/2 - 100, "특별 문어 등장! 이번에는 잡을 수 있어요!", '#facc15', 3000);
+            }
+        }
+
+        function spawnFish() {
+            const w = gameCanvas.width || window.innerWidth;
+            const h = gameCanvas.height || window.innerHeight;
+            const diffConf = getDiffConfig();
+            
+            const fishTypes = ['fish1', 'fish2', 'fish3'];
+            const typeId = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+            
+            const y = h * 0.15 + Math.random() * (h * 0.65);
+            const dir = Math.random() > 0.5 ? 1 : -1;
+            const x = dir === 1 ? -150 : w + 150;
+            const depthScale = Math.random() * 0.6 + 0.6;
+            
+            items.push({
+                id: Math.random().toString(),
+                x: x, y: y,
+                r: diffConf.itemR * depthScale * 0.8,
+                type: itemTypes[typeId],
+                grabbed: false,
+                dir: dir,
+                speed: (Math.random() * 4 + 3) * depthScale * diffConf.speedMult,
+                depthScale: depthScale,
+                timeOffset: Math.random() * 10000
+            });
+        }
+
+        function createSparkles(x, y, color) {
+            for(let i=0; i<15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 6 + 2;
+                particles.push({
+                    type: 'sparkle',
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+        
+        function createScorePopup(x, y, text = '+1', color = '#facc15', duration = 1000) {
+            particles.push({
+                type: 'text',
+                text: text,
+                x: x, y: y,
+                vy: -2,
+                life: duration / 1000,
+                color: color
+            });
+        }
+
+        function createInkParticles(x, y) {
+            for(let i=0; i<30; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 200 + 50;
+                particles.push({
+                    type: 'ink',
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 2.0,
+                    maxLife: 2.0,
+                    r: Math.random() * 20 + 10
+                });
+            }
+        }
+
+        function resetExerciseRoundState() {
+            isExercising = false;
+            score = 0;
+            timeLeft = getDiffConfig().time;
+            activeCursors.forEach(c => { c.x = -100; c.y = -100; c.hoverItem = null; c.hoverTime = 0; c.grabbedItem = null; });
+            if (timerInterval) clearInterval(timerInterval);
+            items = [];
+            particles = [];
+            basketStackedItems = [];
+            octopusAppearCount = 0;
+            createInitialItems();
+            octopusSpawnTimer = performance.now() + 8000 + Math.random() * 4000;
+            octopusCount = 0;
+            document.getElementById('ui-score').innerText = '딴 보물 0개';
+            document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
+        }
+
+        function showSettingsForNextTeam() {
+            resetExerciseRoundState();
+            currentPlayer = 1;
+            teamRunTotalScore = 0;
+            document.body.classList.remove('game-active');
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('top-bar').classList.remove('active');
+            document.getElementById('settings-panel').classList.remove('hidden');
+            prepareSelectedTeamStart();
+        }
+
+        function runCountdownThenStart() {
+            const countdownScreen = document.getElementById('countdown-screen');
+            const countdownText = document.getElementById('countdown-text');
+            countdownScreen.classList.add('active');
+            let count = 3;
+            countdownText.innerText = count;
+            const countInt = setInterval(() => {
+                count--;
+                if (count > 0) countdownText.innerText = count;
+                else {
+                    clearInterval(countInt);
+                    countdownScreen.classList.remove('active');
+                    startGame();
+                }
+            }, 600);
+        }
+
+        function drawEffects(now, dt) {
+            const w = effectsCanvas.width || window.innerWidth;
+            const h = effectsCanvas.height || window.innerHeight;
+            effectsCtx.clearRect(0, 0, w, h);
+            
+            effectsCtx.save();
+            effectsCtx.globalCompositeOperation = 'screen';
+            lightRays.forEach(ray => {
+                const sway = Math.sin(now * ray.speed + ray.timeOffset) * 150;
+                const grad = effectsCtx.createLinearGradient(ray.xBase + sway, 0, ray.xBase + sway + ray.widthBottom, h);
+                grad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+                grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                effectsCtx.fillStyle = grad;
+                
+                effectsCtx.beginPath();
+                effectsCtx.moveTo(ray.xBase + sway - ray.widthTop/2, 0);
+                effectsCtx.lineTo(ray.xBase + sway + ray.widthTop/2, 0);
+                effectsCtx.lineTo(ray.xBase + sway + ray.widthBottom, h);
+                effectsCtx.lineTo(ray.xBase + sway - ray.widthBottom, h);
+                effectsCtx.fill();
+            });
+            effectsCtx.restore();
+
+            effectsCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            bubbles.forEach(b => {
+                b.y -= b.speed * (dt / 16);
+                b.x += Math.sin(b.wobble) * 1.5;
+                b.wobble += b.wobbleSpeed;
+                if (b.y < -20) {
+                    b.y = h + 20;
+                    b.x = Math.random() * w;
+                }
+                effectsCtx.beginPath();
+                effectsCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                effectsCtx.fill();
+            });
+        }
+
+        function drawBasketItems(ctx, now) {
+            const w = ctx.canvas.width || window.innerWidth;
+            const h = ctx.canvas.height || window.innerHeight;
+            
+            const bx = w * 0.76;
+            const by = h * 0.70;
+            const bw = w * 0.94 - bx;
+            const bh = h * 0.91 - by;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.ellipse(bx + bw/2, by + bh/2, bw/2, bh/2, 0, 0, Math.PI * 2);
+            ctx.clip();
+            
+            basketStackedItems.forEach(bItem => {
+                ctx.translate(bItem.x, bItem.y);
+                ctx.rotate(bItem.rot);
+                if (bItem.type.imgLoaded && bItem.type.img) {
+                    ctx.drawImage(bItem.type.img, -bItem.r, -bItem.r, bItem.r * 2, bItem.r * 2);
+                } else {
+                    ctx.fillStyle = bItem.type.imgError ? '#ef4444' : '#94a3b8';
+                    ctx.fillRect(-bItem.r, -bItem.r, bItem.r * 2, bItem.r * 2);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `bold ${bItem.r * 0.6}px Inter`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(bItem.type.name.charAt(0), 0, 0);
+                }
+                ctx.rotate(-bItem.rot);
+                ctx.translate(-bItem.x, -bItem.y);
+            });
+            ctx.restore();
+        }
+
+        function drawItem(item, now, dt) {
+            const diffConf = getDiffConfig();
+            const behavior = item.type.behavior;
+            const t = now + item.timeOffset;
+            
+            if (!item.grabbed) {
+                if (behavior === 'sway') {
+                    item.x = item.baseX + Math.sin(t / 800) * 3;
+                    item.y = item.baseY + Math.cos(t / 1200) * 2;
+                } else if (behavior === 'crawl') {
+                    item.x += Math.sin(t / 2500) * 0.8 * (dt/16) * diffConf.speedMult;
+                } else if (behavior === 'swim') {
+                    let isFleeing = false;
+                    if (item.type.evasive && isExercising) {
+                        const fleeDistance = 140;
+                        for (const cursor of activeCursors) {
+                            if (cursor.x < 0 || cursor.y < 0) continue;
+                            const dist = Math.hypot(item.x - cursor.x, item.y - cursor.y);
+                            if (dist < fleeDistance) {
+                                isFleeing = true;
+                                const angle = Math.atan2(item.y - cursor.y, item.x - cursor.x);
+                                const fleeSpeed = item.speed * 2.5;
+                                item.x += Math.cos(angle) * fleeSpeed * (dt / 16);
+                                item.y += Math.sin(angle) * fleeSpeed * (dt / 16);
+                                item.dir = Math.cos(angle) > 0 ? 1 : -1;
+                                break;
+                            }
+                        }
+                    }
+                    if (!isFleeing) {
+                        item.x += item.dir * item.speed * (dt / 16);
+                        item.y += Math.sin(t / 300) * 0.8 * (dt/16);
+                    }
+                } else if (behavior === 'octopus') {
+                    if (item.escaped) {
+                        item.dead = true;
+                    } else if (item.isFleeing) {
+                        item.x -= item.dir * 4 * (dt/16);
+                        if (now - item.fleeStartTime > 2000) item.dead = true;
+                    } else {
+                        item.x += Math.sin(t / 1000) * 2;
+                        item.y += Math.cos(t / 1500) * 1;
+                        if (isExercising && item.isSpecial) {
+                            for (const cursor of activeCursors) {
+                                if (Math.hypot(item.x - cursor.x, item.y - cursor.y) < 100) {
+                                    item.isFleeing = true;
+                                    item.fleeStartTime = now;
+                                }
+                            }
+                        }
+                    }
+                    if (!item.isFleeing && now - item.spawnTime > 8000) {
+                        if (!item.isSpecial) {
+                            item.escaped = true;
+                            createInkParticles(item.x, item.y);
+                        }
+                        if (octopusSpawnTimer === 0) {
+                            octopusSpawnTimer = performance.now() + 8000 + Math.random() * 4000;
+                        }
+                    }
+                }
+            }
+
+            const x = item.x;
+            const y = item.y;
+            const r = item.r;
+
+            gameCtx.save();
+            gameCtx.globalAlpha = 1.0;
+            if (item.type.grabbable || item.grabbable) {
+                gameCtx.shadowColor = 'rgba(255,255,255,0.7)';
+                gameCtx.shadowBlur = 15;
+                gameCtx.shadowOffsetY = 0;
+                if (item.isSpecial) {
+                    gameCtx.beginPath();
+                    gameCtx.arc(x, y, r * 1.2, 0, Math.PI * 2);
+                    gameCtx.strokeStyle = '#facc15';
+                    gameCtx.lineWidth = 6;
+                    gameCtx.setLineDash([10, 10]);
+                    gameCtx.stroke();
+                    gameCtx.setLineDash([]);
+                }
+                gameCtx.fillStyle = 'rgba(0,0,0,0.3)';
+                gameCtx.shadowBlur = 12;
+                gameCtx.shadowOffsetY = 6;
+            }
+            
+            // dir === 1 means swimming right, so scaleX = -1 to flip right.
+            let scaleX = (behavior === 'swim' && item.dir === 1) ? -1 : 1;
+            let rot = 0;
+            if (behavior === 'sway') rot = Math.sin(t / 800) * 0.1;
+            else if (behavior === 'float') rot = Math.sin(t / 1500) * 0.15;
+            else if (behavior === 'swim') rot = Math.sin(t / 300) * 0.1;
+            
+            gameCtx.translate(x, y);
+            gameCtx.scale(scaleX, 1);
+            gameCtx.rotate(rot);
+            
+            if (item.type.imgLoaded && item.type.img) {
+                gameCtx.drawImage(item.type.img, -r, -r, r * 2, r * 2);
+            } else {
+                gameCtx.fillStyle = item.type.imgError ? '#ef4444' : '#94a3b8';
+                gameCtx.fillRect(-r, -r, r * 2, r * 2);
+                gameCtx.fillStyle = '#fff';
+                gameCtx.font = `bold ${r * 0.6}px Inter`;
+                gameCtx.textAlign = 'center';
+                gameCtx.textBaseline = 'middle';
+                gameCtx.fillText(item.type.name.charAt(0), 0, 0);
+            }
+            
+            gameCtx.restore();
+        }
+        
+        function drawParticles(dt) {
+            gameCtx.save();
+            for(let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= dt / 1000;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                gameCtx.globalAlpha = p.life;
+                if (p.type === 'sparkle') {
+                    p.x += p.vx * (dt/16);
+                    p.y += p.vy * (dt/16);
+                    p.vy += 0.2; // gravity
+                    gameCtx.fillStyle = p.color;
+                    gameCtx.beginPath();
+                    gameCtx.arc(p.x, p.y, p.life * 6, 0, Math.PI * 2);
+                    gameCtx.fill();
+                } else if (p.type === 'text') {
+                    p.y += p.vy * (dt/16);
+                    gameCtx.fillStyle = p.color;
+                    gameCtx.font = '900 64px Inter';
+                    gameCtx.textAlign = 'center';
+                    gameCtx.textBaseline = 'middle';
+                    gameCtx.shadowColor = 'rgba(0,0,0,0.8)';
+                    gameCtx.shadowBlur = 10;
+                    gameCtx.fillText(p.text, p.x, p.y);
+                } else if (p.type === 'ink') {
+                    p.x += p.vx * (dt/1000);
+                    p.y += p.vy * (dt/1000);
+                    // Slow down velocity (friction effect)
+                    p.vx *= 0.95;
+                    p.vy *= 0.95;
+                    
+                    const opacity = Math.min(0.8, p.life / p.maxLife * 0.8);
+                    gameCtx.fillStyle = `rgba(0,0,0,${opacity})`;
+                    gameCtx.beginPath();
+                    gameCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    gameCtx.fill();
+                }
+            }
+            gameCtx.restore();
+        }
+
+        function gameLoop(now = performance.now()) {
+            const dt = Math.min(40, now - lastTime);
+            lastTime = now;
+            
+            drawEffects(now, dt);
+            
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            // Octopus Spawn Logic
+            if (isExercising && octopusSpawnTimer && now > octopusSpawnTimer) {
+                const diffConf = getDiffConfig();
+                if (octopusCount < diffConf.maxOctopus) {
+                    const w = gameCanvas.width || window.innerWidth;
+                    const h = gameCanvas.height || window.innerHeight;
+                    
+                    let isGrabbable = false;
+                    if (config.diff === 'hard' && octopusCount === 2) {
+                        isGrabbable = true;
+                    }
+
+                    // Spawn an octopus near a random position
+                    items.push({
+                        id: Math.random().toString(),
+                        x: w * 0.2 + Math.random() * (w * 0.6),
+                        y: h * 0.6 + Math.random() * (h * 0.3),
+                        r: diffConf.itemR * 1.2,
+                        type: itemTypes['octopus'],
+                        typeId: 'octopus',
+                        grabbed: false,
+                        dir: Math.random() > 0.5 ? 1 : -1,
+                        speed: 1.5,
+                        timeOffset: Math.random() * 10000,
+                        spawnTime: now,
+                        touchTime: 0,
+                        inkTriggered: false,
+                        isFleeing: false,
+                        escaped: false,
+                        grabbable: isGrabbable,
+                        isSpecial: isGrabbable
+                    });
+                    
+                    if (isGrabbable) {
+                        createScorePopup(w/2, h/2 - 100, "특별 문어 등장! 이번에는 잡을 수 있어요!", '#facc15', 3000);
+                    }
+                    
+                    octopusCount++;
+                }
+                octopusSpawnTimer = 0;
+            }
+            
+            const w = gameCanvas.width || window.innerWidth;
+            const h = gameCanvas.height || window.innerHeight;
+            const diffConf = getDiffConfig();
+
+            // Draw stacked items inside the invisible basket area
+            drawBasketItems(gameCtx, now);
+
+            // Draw active moving items
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.dead) {
+                    items.splice(i, 1);
+                    i--;
+                    continue;
+                }
+                drawItem(item, now, dt);
+            }
+            
+            // Draw particles
+            drawParticles(dt);
+
+            // Octopus spawn logic is now at the top of gameLoop
+            // Old ink overlay removed. Ink particles are drawn in drawParticles()
+
+            if(isExercising) {
+                // Process hovers
+                activeCursors.forEach(cursor => {
+                    if(cursor.x !== -100 && cursor.y !== -100) {
+                        if(cursor.hoverItem && !cursor.grabbedItem) {
+                            cursor.hoverTime += dt;
+                            const reqTime = diffConf.reqHover;
+                            if(cursor.hoverTime >= reqTime) {
+                                // Successfully grabbed!
+                                if (!cursor.hoverItem.grabbed) {
+                                    cursor.grabbedItem = cursor.hoverItem;
+                                    cursor.grabbedItem.grabbed = true;
+                                    cursor.grabbedItem.grabbedBy = cursor.handType;
+                                    createSparkles(cursor.hoverItem.x, cursor.hoverItem.y, '#facc15');
+                                }
+                                cursor.hoverItem = null;
+                                cursor.hoverTime = 0;
+                            }
+                        }
+                    }
+                });
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleItemLogic(px, py, cursorIndex, handType) {
+            const cursor = activeCursors[cursorIndex];
+            cursor.x = px;
+            cursor.y = py;
+            cursor.handType = handType;
+            
+            const w = gameCanvas.width || window.innerWidth;
+            const h = gameCanvas.height || window.innerHeight;
+            const diffConf = getDiffConfig();
+
+            // Invisible basket hit box area based on real background image basket
+            const bx = w * 0.76;
+            const by = h * 0.70;
+            const bw = w * 0.94 - bx;
+            const bh = h * 0.91 - by;
+
+            if (cursor.grabbedItem) {
+                // Moving grabbed item (smoothly interpolate to hand)
+                cursor.grabbedItem.x += (px - cursor.grabbedItem.x) * 0.4;
+                cursor.grabbedItem.y += (py - cursor.grabbedItem.y) * 0.4;
+
+                // Drop in invisible basket with depth
+                const depthY = by + (bh * diffConf.dropDepth);
+                if (cursor.grabbedItem.x > bx && cursor.grabbedItem.x < bx + bw && cursor.grabbedItem.y > depthY && cursor.grabbedItem.y < by + bh) {
+                    if (cursor.grabbedItem.isSpecial) {
+                        score += 3;
+                        createScorePopup(cursor.grabbedItem.x, cursor.grabbedItem.y - 80, "특별 문어 +3점!", "#facc15", 2000);
+                    } else {
+                        score++;
+                        createScorePopup(cursor.grabbedItem.x, cursor.grabbedItem.y - 40);
+                    }
+                    document.getElementById('ui-score').innerText = `딴 보물 ${score}개`;
+                    
+                    // Stack in basket (up to 15, pile up from bottom)
+                    if (basketStackedItems.length < 15) {
+                        basketStackedItems.push({
+                            type: cursor.grabbedItem.type,
+                            x: bx + bw*0.2 + Math.random() * (bw*0.6),
+                            y: by + bh*0.5 + Math.random() * (bh*0.4), // strictly in bottom half
+                            rot: Math.random() * Math.PI * 2,
+                            r: cursor.grabbedItem.r * 0.25 // smaller size (20~30%)
+                        });
+                    }
+                    
+                    const oldType = cursor.grabbedItem.typeId;
+                    const idx = items.indexOf(cursor.grabbedItem);
+                    if(idx > -1) items.splice(idx, 1);
+                    
+                    const grabbed = cursor.grabbedItem;
+                    cursor.grabbedItem = null;
+                    cursor.hoverItem = null;
+                    cursor.hoverTime = 0;
+                    if (grabbed) {
+                        grabbed.grabbed = false;
+                        grabbed.grabbedBy = null;
+                    }
+                    
+                    activeCursors.forEach(hand => {
+                        if (hand.hoverItem === grabbed) {
+                            hand.hoverItem = null;
+                            hand.hoverTime = 0;
+                        }
+                        if (hand.grabbedItem === grabbed) {
+                            hand.grabbedItem = null;
+                        }
+                    });
+                    
+                    spawnItem(oldType);
+                    ensureGrabbableItems();
+                }
+            } else {
+                // Check collision to hover
+                let nearest = null;
+                let nearestDistance = Infinity;
+
+                // 1. Process octopus ink touching (uncatchable octopus only)
+                items.forEach(item => {
+                    if (item.typeId === 'octopus' && !item.grabbable && !item.escaped && !item.inkTriggered) {
+                        const d = Math.hypot(item.x - px, item.y - py);
+                        if (d < diffConf.hookRadius) {
+                            item.inkTriggered = true;
+                            item.escaped = true; // hides it
+                            createInkParticles(item.x, item.y);
+                            if (cursor.hoverItem === item) {
+                                cursor.hoverItem = null;
+                                cursor.hoverTime = 0;
+                            }
+                        }
+                    }
+                });
+
+                // 2. Check if current hoverItem is still within leaveRadius
+                if (cursor.hoverItem && !cursor.hoverItem.grabbed && !cursor.hoverItem.escaped) {
+                    const item = cursor.hoverItem;
+                    const d = Math.hypot(item.x - px, item.y - py);
+                    let shellHit = false;
+                    if (item.typeId === 'conch') {
+                        const dx = Math.abs(item.x - px);
+                        const dy = Math.abs(item.y - py);
+                        shellHit = dx < item.r * 1.0 && dy < item.r * 1.0;
+                    }
+                    if (d < diffConf.leaveRadius || shellHit) {
+                        nearest = item;
+                        nearestDistance = d;
+                    }
+                }
+
+                // 3. If no active hover, check enter collision for all grabbables
+                if (!nearest) {
+                    items.forEach(item => {
+                        let grabbable = item.type.grabbable;
+                        if (item.typeId === 'octopus') grabbable = item.grabbable;
+                        if (!grabbable || item.grabbed || item.escaped) return;
+                        
+                        const d = Math.hypot(item.x - px, item.y - py);
+                        const hitRadius = diffConf.hookRadius;
+                        
+                        if (d < hitRadius) {
+                            if (d < nearestDistance) {
+                                nearest = item;
+                                nearestDistance = d;
+                            }
+                        }
+                    });
+                }
+
+                if (nearest) {
+                    if(cursor.hoverItem !== nearest) {
+                        cursor.hoverItem = nearest;
+                        cursor.hoverTime = 0;
+                    }
+                } else {
+                    cursor.hoverItem = null;
+                    cursor.hoverTime = 0;
+                }
+            }
+        }
+
+        const hands = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+        let handRecognized = false;
+        let handEverRecognized = false;
+        let handLostFrames = 0;
+
+        hands.onResults(results => {
+            handCtx.save();
+            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                handLostFrames = 0;
+                    if (!handRecognized) {
+                        handRecognized = true;
+                        const statusEl = document.getElementById('hand-status');
+                        if (statusEl) {
+                            statusEl.innerText = '손이 인식되었습니다!';
+                            statusEl.style.color = '#10b981';
+                        }
+                    }
+                
+                let anyFist = false;
+                results.multiHandLandmarks.forEach((landmarks, index) => {
+                    const cursorIndex = index < 2 ? index : 0;
+                    
+                    if (isFist(landmarks)) anyFist = true;
+                    
+                    // Mirror the landmarks for both drawing and collision
+                    const mirroredLandmarks = landmarks.map(lm => ({...lm, x: 1 - lm.x}));
+                    
+                    drawConnectors(handCtx, mirroredLandmarks, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 6 });
+                    drawLandmarks(handCtx, mirroredLandmarks, { color: '#facc15', lineWidth: 2, radius: 6 });
+                    
+                    const diffConf = getDiffConfig();
+                    
+                    const wrist = mirroredLandmarks[0];
+                    const indexTip = mirroredLandmarks[8];
+                    
+                    const wristX = wrist.x * handCanvas.width;
+                    const wristY = wrist.y * handCanvas.height;
+                    const fingerX = indexTip.x * handCanvas.width;
+                    const fingerY = indexTip.y * handCanvas.height;
+
+                    // Handedness Label gives 'Right' or 'Left'
+                    const handednessLabel = results.multiHandedness[index].label;
+                    const handType = handednessLabel === 'Right' ? 'hook' : 'bare';
+                    
+                    let targetX = fingerX;
+                    let targetY = fingerY;
+                    
+                    if (handType === 'hook') {
+                        const dx = fingerX - wristX;
+                        const dy = fingerY - wristY;
+                        const len = Math.hypot(dx, dy) || 1;
+                        const ux = dx / len;
+                        const uy = dy / len;
+                        
+                        const hookTipX = fingerX + ux * diffConf.hookLen;
+                        const hookTipY = fingerY + uy * diffConf.hookLen;
+                        
+                        // Draw stick
+                        handCtx.beginPath();
+                        handCtx.moveTo(wristX, wristY);
+                        handCtx.lineTo(hookTipX, hookTipY);
+                        handCtx.lineWidth = 12;
+                        handCtx.strokeStyle = '#5c4033'; // dark brown
+                        handCtx.lineCap = 'round';
+                        handCtx.stroke();
+                        
+                        // Draw metal hook at the tip
+                        handCtx.beginPath();
+                        handCtx.arc(hookTipX + ux * 15, hookTipY + uy * 15, 20, Math.atan2(uy, ux) - Math.PI, Math.atan2(uy, ux));
+                        handCtx.lineWidth = 6;
+                        handCtx.strokeStyle = '#d4d4d8'; // silver
+                        handCtx.stroke();
+                        
+                        targetX = hookTipX;
+                        targetY = hookTipY;
+                    }
+                    
+                    if (isExercising) {
+                        handleItemLogic(targetX, targetY, cursorIndex, handType);
+                        
+                        const cursor = activeCursors[cursorIndex];
+                        
+                        // Hover Progress Ring
+                        if (cursor.hoverItem && !cursor.grabbedItem) {
+                            const reqTime = diffConf.reqHover;
+                            const progress = Math.min(1, cursor.hoverTime / reqTime);
+                            handCtx.beginPath();
+                            handCtx.arc(targetX, targetY, 25, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * progress));
+                            handCtx.lineWidth = 8;
+                            handCtx.strokeStyle = '#facc15';
+                            handCtx.lineCap = 'round';
+                            handCtx.stroke();
+                        }
+                    }
+                });
+                
+                // Fist logic removed as per requirements
+            } else {
+                handLostFrames++;
+                if (handLostFrames > 30 && handRecognized) {
+                    handRecognized = false;
+                }
+                
+                activeCursors.forEach(cursor => {
+                    cursor.x = -100;
+                    cursor.y = -100;
+                    cursor.hoverItem = null;
+                    cursor.hoverTime = 0;
+                    if(cursor.grabbedItem && isExercising) {
+                        cursor.grabbedItem.grabbed = false;
+                        cursor.grabbedItem.x = Math.max(cursor.grabbedItem.r, Math.min(gameCanvas.width - cursor.grabbedItem.r, cursor.grabbedItem.x));
+                        cursor.grabbedItem.y = Math.max(cursor.grabbedItem.r, Math.min(gameCanvas.height - cursor.grabbedItem.r, cursor.grabbedItem.y));
+                        cursor.grabbedItem = null;
+                    }
+                });
+            }
+            handCtx.restore();
+        });
+
+        let cameraReady = false;
+
+        async function startCamera() {
+            const btnCam = document.getElementById('btn-camera');
+            const btnStart = document.getElementById('btn-start');
+            const statusEl = document.getElementById('hand-status');
+
+            cameraReady = false;
+            handRecognized = false;
+            handEverRecognized = false;
+            handLostFrames = 0;
+            document.body.classList.remove('game-active');
+
+            btnCam.innerText = '카메라 연결중';
+            btnCam.style.opacity = '0.7';
+            btnCam.disabled = true;
+            
+            if (btnStart) {
+                btnStart.disabled = true;
+                btnStart.style.opacity = '0.5';
+                btnStart.classList.remove('btn-ready');
+            }
+            if (statusEl) {
+                statusEl.innerText = '브라우저의 카메라 사용 권한을 허용해 주세요.';
+                statusEl.style.color = '#3b82f6';
+            }
+            
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("브라우저가 카메라를 지원하지 않거나 HTTPS 환경이 아닙니다.");
+                }
+                
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+                } catch(e) {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                }
+                
+                if (!stream) {
+                    throw new Error('No stream');
+                }
+                
+                showCameraPreview();
+                videoElement.srcObject = stream;
+                videoElement.setAttribute('playsinline', '');
+                videoElement.muted = true;
+                
+                await new Promise((resolve, reject) => {
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(resolve).catch(reject);
+                    };
+                    videoElement.onerror = reject;
+                    setTimeout(() => reject(new Error('Video play timeout')), 10000);
+                });
+                
+                if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+                    throw new Error('Invalid video dimensions');
+                }
+
+                if (statusEl) {
+                    statusEl.innerText = '준비되었습니다. 시작하기를 눌러주세요.';
+                    statusEl.style.color = '#10b981';
+                }
+                btnCam.style.display = 'none';
+
+                cameraReady = true;
+                if (btnStart) { 
+                    btnStart.disabled = false;
+                    btnStart.style.opacity = '1';
+                    btnStart.innerText = '전복 따러 가기';
+                    btnStart.classList.add('btn-ready');
+                }
+                if (typeof prepareSelectedTeamStart === 'function') prepareSelectedTeamStart();
+
+                console.log('[LOG] MediaPipe 전송 시작');
+                async function processFrame() {
+                    if (videoElement && videoElement.readyState >= 2) {
+                        try {
+                            await hands.send({ image: videoElement });
+                        } catch (e) {
+                            console.warn("Hand processing err", e);
+                        }
+                    }
+                    if (videoElement && videoElement.srcObject) {
+                        videoElement.requestVideoFrameCallback(processFrame);
+                    }
+                }
+                videoElement.requestVideoFrameCallback(processFrame);
+
+            } catch (err) {
+                console.error("Camera Error:", err);
+                if (statusEl) {
+                    statusEl.innerText = '카메라 사용이 차단되어 있습니다. 브라우저 권한을 허용해 주세요.';
+                    statusEl.style.color = '#ef4444';
+                }
+                btnCam.innerText = '카메라 켜기';
+                btnCam.style.display = 'block';
+                btnCam.style.opacity = '1';
+                btnCam.disabled = false;
+                
+                if (btnStart) {
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnStart.classList.remove('btn-ready');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            resizeCanvases();
+            document.getElementById('btn-start').disabled = true;
+            document.getElementById('btn-start').style.opacity = '0.5';
+            document.getElementById('btn-start').innerText = '먼저 카메라를 켜주세요';
+            document.getElementById('btn-start').addEventListener('click', () => {
+                if (!cameraReady) {
+                    alert('먼저 카메라 권한을 허용해주세요');
+                    return;
+                }
+                currentPlayer = 1;
+                teamRunTotalScore = 0;
+                octopusAppearCount = 0;
+                resetExerciseRoundState();
+                document.getElementById('settings-panel').classList.add('hidden');
+                requestAnimationFrame(() => {
+                    resizeCanvases();
+                });
+                document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+                runCountdownThenStart();
+            });
+            prepareSelectedTeamStart();
+            
+            if (!isGameLoopRunning) {
+                isGameLoopRunning = true;
+                lastTime = performance.now();
+                requestAnimationFrame(gameLoop);
+            }
+        });
+
+        function startGame() {
+            BGMManager.init('general', config.mode);
+            BGMManager.play(config.mode === 'group' && currentPlayer > 1);
+            document.body.classList.add('game-active');
+            hideCameraPreviewOnly();
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('top-bar').classList.add('active');
+            
+            const guideOverlay = document.getElementById('guide-overlay');
+            guideOverlay.style.display = 'block';
+            guideOverlay.style.opacity = '1';
+            
+            if (window.guideHideTimer) clearTimeout(window.guideHideTimer);
+            window.guideHideTimer = setTimeout(() => {
+                guideOverlay.style.opacity = '0';
+                setTimeout(() => guideOverlay.style.display = 'none', 400);
+            }, 10000);
+            
+            resetExerciseRoundState();
+            
+            const diffConf = getDiffConfig();
+            timeLeft = diffConf.time;
+            
+            document.getElementById('ui-title').innerHTML = config.mode === 'group'
+                ? `${teamNames[config.team]} <span style="font-size:24px;">${currentPlayer}번 참가자</span>`
+                : '전복 따러 가요 개인모드';
+                
+            const subGuide = document.querySelector('#guide-overlay .sub-guide');
+            if (subGuide) subGuide.innerHTML = diffConf.guide;
+            
+            isExercising = true;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('ui-time').innerText = `남은시간 ${timeLeft}초`;
+                if (timeLeft <= 0) endExercise();
+            }, 1000);
+        }
+
+        function endExercise() {
+            BGMManager.stop();
+            isExercising = false;
+            clearInterval(timerInterval);
+            document.getElementById('top-bar').classList.remove('active');
+            document.getElementById('guide-overlay').style.display = 'none';
+            document.getElementById('result-screen').classList.add('active');
+            document.getElementById('res-score').innerText = `딴 보물 ${score}개`;
+            
+            const diffConf = getDiffConfig();
+            document.getElementById('res-time').innerText = `운동 시간: ${diffConf.time}초`;
+            
+            if (config.mode === 'group') {
+                teamRunTotalScore += score;
+                document.getElementById('res-subtitle').innerText = '수고하셨습니다!';
+                document.getElementById('res-title').innerText = `${teamNames[config.team]} ${currentPlayer}번 참가자 완료`;
+                if (currentPlayer < parseInt(config.players)) {
+                    document.getElementById('res-next-notice').style.display = 'block';
+                    document.getElementById('res-btn').innerText = '다음 참가자 시작하기';
+                } else {
+                    teamScores[config.team] += teamRunTotalScore;
+                    teamCompleted[config.team] = true;
+                    saveTeamProgress();
+                    document.getElementById('res-next-notice').style.display = 'none';
+                    document.getElementById('res-btn').innerText = allTeamsCompleted() ? '모든 팀 결과 보기' : '다른 팀 선택하기';
+                }
+            } else {
+                document.getElementById('res-subtitle').innerText = '잘했어요! 보물을 땄어요!';
+                document.getElementById('res-title').innerText = '수고하셨습니다';
+                document.getElementById('res-next-notice').style.display = 'none';
+                document.getElementById('res-btn').innerText = '다시 시작하기';
+                fireConfetti('confetti-single');
+            }
+            
+            activeCursors.forEach(cursor => {
+                if(cursor.grabbedItem) {
+                    cursor.grabbedItem.grabbed = false;
+                    cursor.grabbedItem = null;
+                }
+                cursor.hoverItem = null;
+                cursor.hoverTime = 0;
+            });
+        }
+
+        function nextAction() {
+            document.getElementById('result-screen').classList.remove('active');
+            document.getElementById('scoreboard-screen').classList.remove('active');
+            if (config.mode === 'group') {
+                if (currentPlayer >= parseInt(config.players)) {
+                    if (allTeamsCompleted()) showScoreboard();
+                    else showSettingsForNextTeam();
+                    return;
+                }
+                currentPlayer++;
+            }
+            resetExerciseRoundState();
+            runCountdownThenStart();
+        }
+
+        function showScoreboard() {
+            document.getElementById('settings-panel').classList.add('hidden');
+            document.querySelectorAll('.overlay-screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById('scoreboard-screen').classList.add('active');
+            const completedCount = orderedTeams.filter(team => teamCompleted[team]).length;
+            let maxScore = -1;
+            const html = [];
+            orderedTeams.forEach(team => {
+                const scoreText = teamCompleted[team] ? `<span style="color:#facc15">${teamScores[team]}</span>개` : `<span style="color:#94a3b8">미완료</span>`;
+                html.push(`<div style="margin-bottom:20px;">${teamNames[team]} : ${scoreText}</div>`);
+                if (teamCompleted[team] && teamScores[team] > maxScore) maxScore = teamScores[team];
+            });
+            const winners = orderedTeams.filter(team => teamCompleted[team] && teamScores[team] === maxScore).map(team => plainNames[team]);
+            document.getElementById('score-list').innerHTML = html.join('');
+            if (completedCount === 3 && winners.length > 1) {
+                document.getElementById('score-winner').innerText = `1등: ${winners.join(' / ')} 공동 1등 (${maxScore}개)`;
+                fireConfetti('confetti');
+            } else if (completedCount === 3 && winners.length === 1) {
+                document.getElementById('score-winner').innerText = `1등: ${winners[0]} (${maxScore}개)`;
+                fireConfetti('confetti');
+            } else if (completedCount > 0) {
+                document.getElementById('score-winner').innerText = `진행 중: ${completedCount}/3팀 완료`;
+            } else {
+                document.getElementById('score-winner').innerText = '아직 기록이 없습니다.';
+            }
+        }
+
+        function closeScoreboard() {
+            document.getElementById('scoreboard-screen').classList.remove('active');
+            document.getElementById('settings-panel').classList.remove('hidden');
+            document.body.classList.remove('game-active');
+            prepareSelectedTeamStart();
+        }
+
+        function fireConfetti(canvasId) {
+            const confCanvas = document.getElementById(canvasId);
+            const ctx = confCanvas.getContext('2d');
+            confCanvas.width = window.innerWidth;
+            confCanvas.height = window.innerHeight;
+            let particles = [];
+            const colors = ['#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd'];
+            for (let i = 0; i < 150; i++) particles.push({ x: Math.random() * confCanvas.width, y: Math.random() * confCanvas.height - confCanvas.height, size: Math.random() * 15 + 5, color: colors[Math.floor(Math.random() * colors.length)], speed: Math.random() * 5 + 2, angle: Math.random() * 360 });
+            function render() {
+                if (isExercising && canvasId === 'confetti-single') return;
+                ctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+                particles.forEach(p => {
+                    p.y += p.speed;
+                    p.x += Math.sin(p.angle) * 2;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    if (p.y > confCanvas.height) p.y = -20;
+                });
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+    </script>
+</body>
+</html>
