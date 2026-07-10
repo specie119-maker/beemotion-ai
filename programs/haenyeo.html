@@ -248,10 +248,10 @@
             'abalone': { name: '전복', behavior: 'sway', imageSrc: '../asserts/images/abalone.png', grabbable: true },
             'seacucumber': { name: '해삼', behavior: 'crawl', imageSrc: '../asserts/images/sea_cucumber.png', grabbable: true },
             'conch': { name: '소라', behavior: 'float', imageSrc: '../asserts/images/conch.png', grabbable: true },
-            'fish1': { name: '열대어1', behavior: 'swim', imageSrc: '../asserts/images/fish1.png', grabbable: false, evasive: true },
-            'fish2': { name: '열대어2', behavior: 'swim', imageSrc: '../asserts/images/fish2.png', grabbable: false, evasive: true },
-            'fish3': { name: '복어', behavior: 'swim', imageSrc: '../asserts/images/fish3.png', grabbable: false, evasive: true },
-            'octopus': { name: '문어', behavior: 'octopus', imageSrc: '../asserts/images/octopus.png', grabbable: false, evasive: false, inkOnTouch: true }
+            'fish1': { emoji: '🐠', name: '열대어1', behavior: 'swim', grabbable: false, evasive: true },
+            'fish2': { emoji: '🐟', name: '열대어2', behavior: 'swim', grabbable: false, evasive: true },
+            'fish3': { emoji: '🐡', name: '복어', behavior: 'swim', grabbable: false, evasive: true },
+            'octopus': { emoji: '🐙', name: '문어', behavior: 'octopus', grabbable: false, evasive: false, inkOnTouch: true }
         };
 
         function preloadImages() {
@@ -703,7 +703,12 @@
             basketStackedItems.forEach(bItem => {
                 ctx.translate(bItem.x, bItem.y);
                 ctx.rotate(bItem.rot);
-                if (bItem.type.imgLoaded && bItem.type.img && bItem.type.img.complete) {
+                if (bItem.type.emoji) {
+                    ctx.font = `${bItem.r * 2}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(bItem.type.emoji, 0, 0);
+                } else if (bItem.type.imgLoaded && bItem.type.img && bItem.type.img.complete) {
                     ctx.drawImage(bItem.type.img, -bItem.r, -bItem.r, bItem.r * 2, bItem.r * 2);
                 } else {
                     console.error(bItem.typeId + " 이미지 없음");
@@ -812,7 +817,12 @@
             gameCtx.scale(scaleX, 1);
             gameCtx.rotate(rot);
             
-            if (item.type.imgLoaded && item.type.img && item.type.img.complete) {
+            if (item.type.emoji) {
+                gameCtx.font = `${r * 2}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+                gameCtx.textAlign = 'center';
+                gameCtx.textBaseline = 'middle';
+                gameCtx.fillText(item.type.emoji, 0, 0);
+            } else if (item.type.imgLoaded && item.type.img && item.type.img.complete) {
                 gameCtx.drawImage(item.type.img, -r, -r, r * 2, r * 2);
             } else {
                 console.error(item.typeId + " 이미지 없음");
