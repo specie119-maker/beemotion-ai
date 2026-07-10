@@ -703,16 +703,10 @@
             basketStackedItems.forEach(bItem => {
                 ctx.translate(bItem.x, bItem.y);
                 ctx.rotate(bItem.rot);
-                if (bItem.type.imgLoaded && bItem.type.img) {
+                if (bItem.type.imgLoaded && bItem.type.img && bItem.type.img.complete) {
                     ctx.drawImage(bItem.type.img, -bItem.r, -bItem.r, bItem.r * 2, bItem.r * 2);
                 } else {
-                    ctx.fillStyle = bItem.type.imgError ? '#ef4444' : '#94a3b8';
-                    ctx.fillRect(-bItem.r, -bItem.r, bItem.r * 2, bItem.r * 2);
-                    ctx.fillStyle = '#fff';
-                    ctx.font = `bold ${bItem.r * 0.6}px Inter`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(bItem.type.name.charAt(0), 0, 0);
+                    console.error(bItem.typeId + " 이미지 없음");
                 }
                 ctx.rotate(-bItem.rot);
                 ctx.translate(-bItem.x, -bItem.y);
@@ -818,16 +812,10 @@
             gameCtx.scale(scaleX, 1);
             gameCtx.rotate(rot);
             
-            if (item.type.imgLoaded && item.type.img) {
+            if (item.type.imgLoaded && item.type.img && item.type.img.complete) {
                 gameCtx.drawImage(item.type.img, -r, -r, r * 2, r * 2);
             } else {
-                gameCtx.fillStyle = item.type.imgError ? '#ef4444' : '#94a3b8';
-                gameCtx.fillRect(-r, -r, r * 2, r * 2);
-                gameCtx.fillStyle = '#fff';
-                gameCtx.font = `bold ${r * 0.6}px Inter`;
-                gameCtx.textAlign = 'center';
-                gameCtx.textBaseline = 'middle';
-                gameCtx.fillText(item.type.name.charAt(0), 0, 0);
+                console.error(item.typeId + " 이미지 없음");
             }
             
             gameCtx.restore();
