@@ -1212,7 +1212,6 @@
                             handCtx.arc(targetX, targetY, 25, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * progress));
                             handCtx.lineWidth = 8;
                             handCtx.strokeStyle = '#facc15';
-                            handCtx.lineCap = 'round';
                             handCtx.stroke();
                         }
                     }
@@ -1243,18 +1242,14 @@
 
         let cameraReady = false;
 
-        async function startCamera() {
+        function startCamera() {
             const btnCam = document.getElementById('btn-camera');
             const btnStart = document.getElementById('btn-start');
             const statusEl = document.getElementById('hand-status');
 
-            cameraReady = false;
-            handRecognized = false;
-            handEverRecognized = false;
-            handLostFrames = 0;
             document.body.classList.remove('game-active');
 
-            btnCam.innerText = '카메라 연결중';
+            btnCam.innerText = '카메라 연결중...';
             btnCam.style.opacity = '0.7';
             btnCam.disabled = true;
             
@@ -1267,87 +1262,80 @@
                 statusEl.innerText = '브라우저의 카메라 사용 권한을 허용해 주세요.';
                 statusEl.style.color = '#3b82f6';
             }
-            
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error("브라우저가 카메라를 지원하지 않거나 HTTPS 환경이 아닙니다.");
-                }
-                
-                let stream;
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-                } catch(e) {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                }
-                
-                if (!stream) {
-                    throw new Error('No stream');
-                }
-                
-                showCameraPreview();
-                videoElement.srcObject = stream;
-                videoElement.setAttribute('playsinline', '');
-                videoElement.muted = true;
-                
-                await new Promise((resolve, reject) => {
-                    videoElement.onloadedmetadata = () => {
-                        videoElement.play().then(resolve).catch(reject);
-                    };
-                    videoElement.onerror = reject;
-                    setTimeout(() => reject(new Error('Video play timeout')), 10000);
-                });
-                
-                if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-                    throw new Error('Invalid video dimensions');
-                }
 
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 if (statusEl) {
-                    statusEl.innerText = '준비되었습니다. 시작하기를 눌러주세요.';
-                    statusEl.style.color = '#10b981';
-                }
-                btnCam.style.display = 'none';
-
-                cameraReady = true;
-                if (btnStart) { 
-                    btnStart.disabled = false;
-                    btnStart.style.opacity = '1';
-                    btnStart.innerText = '전복 따러 가기';
-                    btnStart.classList.add('btn-ready');
-                }
-                if (typeof prepareSelectedTeamStart === 'function') prepareSelectedTeamStart();
-
-                console.log('[LOG] MediaPipe 전송 시작');
-                async function processFrame() {
-                    if (videoElement && videoElement.readyState >= 2) {
-                        try {
-                            await hands.send({ image: videoElement });
-                        } catch (e) {
-                            console.warn("Hand processing err", e);
-                        }
-                    }
-                    if (videoElement && videoElement.srcObject) {
-                        videoElement.requestVideoFrameCallback(processFrame);
-                    }
-                }
-                videoElement.requestVideoFrameCallback(processFrame);
-
-            } catch (err) {
-                console.error("Camera Error:", err);
-                if (statusEl) {
-                    statusEl.innerText = '카메라 사용이 차단되어 있습니다. 브라우저 권한을 허용해 주세요.';
+                    statusEl.innerText = '카메라를 지원하지 않는 브라우저이거나 HTTPS가 아닙니다.';
                     statusEl.style.color = '#ef4444';
                 }
                 btnCam.innerText = '카메라 켜기';
-                btnCam.style.display = 'block';
                 btnCam.style.opacity = '1';
                 btnCam.disabled = false;
-                
-                if (btnStart) {
-                    btnStart.disabled = true;
-                    btnStart.style.opacity = '0.5';
-                    btnStart.classList.remove('btn-ready');
-                }
+                return;
             }
+
+            navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } })
+                .then((stream) => {
+                    showCameraPreview();
+                    videoElement.srcObject = stream;
+                    videoElement.setAttribute('playsinline', '');
+                    videoElement.muted = true;
+                    
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(() => {
+                            if (statusEl) {
+                                statusEl.innerText = '준비되었습니다. 시작하기를 눌러주세요.';
+                                statusEl.style.color = '#10b981';
+                            }
+                            btnCam.style.display = 'none';
+
+                            cameraReady = true;
+                            if (btnStart) { 
+                                btnStart.disabled = false;
+                                btnStart.style.opacity = '1';
+                                btnStart.innerText = '전복 따러 가기';
+                                btnStart.classList.add('btn-ready');
+                            }
+                            if (typeof prepareSelectedTeamStart === 'function') prepareSelectedTeamStart();
+
+                            console.log('[LOG] MediaPipe 전송 시작');
+                            async function processFrame() {
+                                if (videoElement && videoElement.readyState >= 2) {
+                                    try {
+                                        await hands.send({ image: videoElement });
+                                    } catch (e) {
+                                        console.warn("Hand processing err", e);
+                                    }
+                                }
+                                if (videoElement && videoElement.srcObject) {
+                                    videoElement.requestVideoFrameCallback(processFrame);
+                                }
+                            }
+                            videoElement.requestVideoFrameCallback(processFrame);
+                        }).catch((err) => {
+                            if (statusEl) {
+                                statusEl.innerText = "비디오 재생 오류: " + err.message;
+                            }
+                        });
+                    };
+                })
+                .catch((err) => {
+                    console.error("Camera Error:", err);
+                    if (statusEl) {
+                        statusEl.innerText = '카메라 사용이 차단되어 있습니다. 브라우저 권한을 허용해 주세요.';
+                        statusEl.style.color = '#ef4444';
+                    }
+                    btnCam.innerText = '카메라 켜기';
+                    btnCam.style.display = 'block';
+                    btnCam.style.opacity = '1';
+                    btnCam.disabled = false;
+                    
+                    if (btnStart) {
+                        btnStart.disabled = true;
+                        btnStart.style.opacity = '0.5';
+                        btnStart.classList.remove('btn-ready');
+                    }
+                });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
